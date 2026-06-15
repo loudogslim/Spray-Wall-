@@ -3,158 +3,296 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <link rel="manifest" href="manifest.json">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Spray Wall">
-  <meta name="theme-color" content="#1a1a1a">
-  <link rel="apple-touch-icon" href="icon-180.png">
-  <link rel="apple-touch-icon" sizes="152x152" href="icon-152.png">
-  <link rel="apple-touch-icon" sizes="120x120" href="icon-120.png">
-<title>Spray Wall Logger</title>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Spray Wall">
+<meta name="theme-color" content="#111111">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="apple-touch-icon" sizes="152x152" href="icon-152.png">
+<link rel="apple-touch-icon" sizes="120x120" href="icon-120.png">
+<title>Spray Wall</title>
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0d0d0d;color:#e8e8e6;min-height:100vh;display:flex;flex-direction:column}
-.tb{display:flex;align-items:center;gap:6px;padding:7px 11px;background:#1a1a1a;border-bottom:1px solid #2e2e2e;flex-wrap:wrap;min-height:42px}
-.tb h1{font-size:14px;font-weight:700;color:#e8e8e6}
-.sep{width:1px;height:20px;background:#2e2e2e;margin:0 1px;flex-shrink:0}
-.lbl{font-size:11px;color:#666;white-space:nowrap}
-button{font-size:12px;padding:4px 9px;border-radius:7px;border:1px solid #3a3a3a;background:#242424;color:#d0d0ce;cursor:pointer;display:inline-flex;align-items:center;gap:3px;line-height:1;white-space:nowrap;transition:background .12s}
-button:hover{background:#2e2e2e;border-color:#4a4a4a}
-button.on{background:#1a3a5c;border-color:#3a7abd;color:#6ab4ff}
-button.red{border-color:#7a2020;color:#ff6b6b}
-button.red:hover{background:#3a1a1a}
-button.green{background:#1a3a1a;border-color:#3a7a3a;color:#6dbf6d}
-button.green:hover{background:#223a22}
-button:disabled{opacity:0.3;cursor:default;pointer-events:none}
-.phase-pill{font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;border:1px solid}
-.pp-setup{background:#2a200a;color:#c8942a;border-color:#5a4010}
-.pp-climb{background:#0a2a0a;color:#6dbf6d;border-color:#1a5a1a}
-/* layout */
-.main{display:flex;flex:1;height:calc(100vh - 86px)}
-.canvas-area{flex:1;position:relative;background:#0a0a0a;display:flex;align-items:center;justify-content:center;overflow:hidden;user-select:none}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#000;color:#e8e8e6;display:flex;flex-direction:column}
+
+/* ── Safe area / env() ──────────────────────────────────── */
+:root{
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --tab-h: 56px;
+  --top-h: 52px;
+}
+
+/* ── Top bar ────────────────────────────────────────────── */
+.top-bar{
+  height:calc(var(--top-h) + var(--sat));
+  padding-top:var(--sat);
+  background:#111;
+  border-bottom:0.5px solid #2a2a2a;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding-left:max(16px, var(--sal));
+  padding-right:max(16px, var(--sar));
+  flex-shrink:0;
+  z-index:10;
+}
+.top-bar-left{display:flex;align-items:center;gap:10px}
+.wall-chip{display:flex;align-items:center;gap:6px;background:#1e1e1e;border:0.5px solid #333;border-radius:20px;padding:5px 12px;font-size:13px;font-weight:500;color:#ddd;cursor:pointer;max-width:180px}
+.wall-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wall-chip svg{flex-shrink:0;opacity:0.5}
+.top-bar-right{display:flex;align-items:center;gap:8px}
+.sync-badge{font-size:11px;border-radius:20px;padding:3px 9px;border:0.5px solid;font-weight:500}
+.icon-btn{width:34px;height:34px;border-radius:50%;background:#1e1e1e;border:0.5px solid #333;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#aaa;font-size:16px}
+.icon-btn:active{background:#2a2a2a}
+
+/* ── Context action bar (above tab bar, phase-specific) ─── */
+.action-bar{
+  position:fixed;
+  bottom:calc(var(--tab-h) + var(--sab));
+  left:0;right:0;
+  background:#161616;
+  border-top:0.5px solid #2a2a2a;
+  padding:8px max(12px,var(--sal)) 8px max(12px,var(--sal));
+  display:none;
+  gap:8px;
+  align-items:center;
+  flex-wrap:wrap;
+  z-index:20;
+}
+.action-bar.visible{display:flex}
+.abtn{font-size:13px;padding:7px 14px;border-radius:22px;border:0.5px solid #3a3a3a;background:#222;color:#ccc;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-weight:500;white-space:nowrap;min-height:36px}
+.abtn:active{opacity:0.75}
+.abtn.on{background:#1a3a5c;border-color:#3a7abd;color:#6ab4ff}
+.abtn.green{background:#1a3a1a;border-color:#3a7a3a;color:#6dbf6d}
+.abtn.red{border-color:#7a2020;color:#ff6b6b}
+.abtn.blue{background:#1a3a5c;border-color:#3a7abd;color:#6ab4ff}
+.poly-count-pill{font-size:11px;background:#1a3a5c;color:#6ab4ff;border:0.5px solid #3a7abd;border-radius:20px;padding:3px 9px;font-weight:500;display:none}
+
+/* hold type buttons — compact */
+.type-group{display:flex;gap:5px;align-items:center}
+.tbtn{font-size:12px;padding:5px 10px;border-radius:20px;border:0.5px solid #3a3a3a;background:#222;color:#888;cursor:pointer;white-space:nowrap}
+.tbtn.on{color:#fff;font-weight:500}
+.tbtn.on-hand{background:#1a3a5c;border-color:#3a7abd;color:#6ab4ff}
+.tbtn.on-foot{background:#2a1e0a;border-color:#c8942a;color:#f9a825}
+.tbtn.on-start{background:#0a2a0a;border-color:#3a7a3a;color:#4caf50}
+.tbtn.on-finish{background:#2a0a0a;border-color:#7a2020;color:#ef5350}
+
+/* ── Main canvas tab ────────────────────────────────────── */
+.tab-content{
+  position:fixed;
+  top:calc(var(--top-h) + var(--sat));
+  left:0;right:0;
+  bottom:calc(var(--tab-h) + var(--sab));
+  display:none;
+  flex-direction:column;
+  background:#000;
+  overflow:hidden;
+}
+.tab-content.active{display:flex}
+
+/* Canvas area fills everything */
+.canvas-area{
+  flex:1;
+  position:relative;
+  background:#0a0a0a;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  user-select:none;
+  touch-action:none;
+}
 .canvas-wrap{position:relative;display:inline-block;line-height:0}
 canvas{display:block}
 #paintCanvas{position:absolute;top:0;left:0}
 #overlayCanvas{position:absolute;top:0;left:0;pointer-events:none}
 #cursorCanvas{position:absolute;top:0;left:0;pointer-events:none}
-.nophoto{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#444;font-size:14px;cursor:pointer;width:100%;height:100%;min-height:400px}
-/* sidebar */
-.sidebar{width:218px;border-left:1px solid #2e2e2e;display:flex;flex-direction:column;background:#161616;flex-shrink:0}
-.sh{padding:8px 12px;border-bottom:1px solid #2e2e2e;font-size:13px;font-weight:600;color:#e8e8e6;display:flex;justify-content:space-between;align-items:center}
-.clist{flex:1;overflow-y:auto;padding:5px}
-.ccard{padding:7px 9px;border-radius:8px;border:1px solid #2e2e2e;margin-bottom:4px;cursor:pointer;background:#1e1e1e}
-.ccard:hover{border-color:#3a3a3a}
-.ccard.sel{border-color:#3a7abd;background:#1a2e40}
-.cn{font-size:12px;font-weight:600;color:#e8e8e6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.cm{font-size:10px;color:#666;margin-top:2px;display:flex;gap:4px;flex-wrap:wrap;align-items:center}
-.cpill{font-size:10px;padding:1px 5px;border-radius:20px;font-weight:500;border:1px solid}
+.nophoto{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#444;cursor:pointer;width:100%;height:100%;padding:32px;text-align:center}
+.nophoto-icon{width:64px;height:64px;border:1.5px dashed #333;border-radius:16px;display:flex;align-items:center;justify-content:center}
+.nophoto p{font-size:15px;color:#888;font-weight:500}
+.nophoto small{font-size:12px;color:#444}
+
+/* ── Climbs tab ─────────────────────────────────────────── */
+.climbs-tab{
+  display:flex;
+  flex-direction:column;
+  background:#111;
+  overflow:hidden;
+}
+.climbs-header{padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:0.5px solid #222}
+.climbs-header h2{font-size:17px;font-weight:600}
+.climbs-list{flex:1;overflow-y:auto;padding:10px 12px;-webkit-overflow-scrolling:touch}
+.ccard{padding:14px;border-radius:14px;border:0.5px solid #252525;margin-bottom:10px;cursor:pointer;background:#1a1a1a;active:opacity:.8}
+.ccard.sel{border-color:#3a7abd;background:#0d1f30}
+.cn{font-size:15px;font-weight:600;color:#eee;margin-bottom:5px}
+.cm{font-size:12px;color:#666;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.cpill{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500;border:0.5px solid}
 .cpg{background:#0a1e30;color:#6ab4ff;border-color:#1a4a7a}
 .cps{background:#0a200a;color:#6dbf6d;border-color:#1a5a1a}
 .cpp{background:#20180a;color:#c8942a;border-color:#5a3a10}
-.dp{padding:8px 12px;border-top:1px solid #2e2e2e;font-size:11px;color:#666;display:flex;flex-direction:column;gap:4px}
-.dr{display:flex;justify-content:space-between}
-.dv{font-size:12px;font-weight:600;color:#e8e8e6}
-.dbtns{display:flex;gap:4px;margin-top:3px}
-.dbtns button{flex:1;font-size:11px;padding:4px 2px;justify-content:center}
-.hint{font-size:11px;color:#555;padding:5px 12px;background:#111;border-top:1px solid #222;min-height:25px}
-.empty{padding:14px;text-align:center;font-size:11px;color:#444;line-height:1.8}
-/* modal */
-.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center}
+.empty{padding:40px 20px;text-align:center;font-size:14px;color:#444;line-height:2}
+
+/* Climb detail sheet */
+.detail-sheet{background:#161616;border-top:0.5px solid #2a2a2a;padding:14px 16px;display:none}
+.detail-sheet.visible{display:block}
+.detail-sheet h3{font-size:15px;font-weight:600;margin-bottom:10px;color:#eee}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.detail-cell{background:#1e1e1e;border-radius:10px;padding:10px 12px;border:0.5px solid #252525}
+.detail-cell .lbl{font-size:10px;color:#555;margin-bottom:3px}
+.detail-cell .val{font-size:14px;font-weight:600;color:#ddd}
+.detail-actions{display:flex;gap:8px}
+.detail-actions button{flex:1;padding:10px;border-radius:12px;font-size:13px;font-weight:500;border:0.5px solid;background:#1e1e1e;color:#aaa;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px}
+.detail-actions button:active{opacity:0.7}
+.dbtn-attempt{border-color:#3a3a3a!important}
+.dbtn-send{border-color:#3a7a3a!important;color:#6dbf6d!important}
+.dbtn-edit{border-color:#3a3a3a!important}
+.dbtn-holds{border-color:#3a7abd!important;color:#6ab4ff!important}
+.dbtn-del{border-color:#7a2020!important;color:#ff6b6b!important}
+.legend-row{font-size:10px;color:#444;margin-top:10px;display:flex;gap:10px;flex-wrap:wrap}
+.legend-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:3px;vertical-align:middle;border:1.5px solid}
+
+/* ── Setup tab ──────────────────────────────────────────── */
+.setup-tab{background:#111;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px}
+.setup-section{margin-bottom:20px}
+.setup-section h3{font-size:13px;font-weight:600;color:#666;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+.setup-row{background:#1a1a1a;border:0.5px solid #252525;border-radius:14px;padding:14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;cursor:pointer}
+.setup-row:active{opacity:.7}
+.setup-row-left{display:flex;flex-direction:column;gap:3px}
+.setup-row-title{font-size:14px;font-weight:500;color:#ddd}
+.setup-row-sub{font-size:12px;color:#555}
+.setup-row-right{font-size:13px;color:#555;display:flex;align-items:center;gap:6px}
+.setup-row-right .arrow{font-size:16px;color:#333}
+
+/* ── Stats tab ──────────────────────────────────────────── */
+.stats-tab{background:#111;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.stat-card{background:#1a1a1a;border:0.5px solid #252525;border-radius:14px;padding:14px}
+.stat-card .sc-val{font-size:26px;font-weight:700;color:#eee;margin-bottom:2px}
+.stat-card .sc-lbl{font-size:11px;color:#555}
+.grade-bars{background:#1a1a1a;border:0.5px solid #252525;border-radius:14px;padding:14px;margin-bottom:10px}
+.grade-bars h4{font-size:13px;color:#666;margin-bottom:10px}
+.gb-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.gb-lbl{font-size:11px;color:#666;width:28px;text-align:right;flex-shrink:0}
+.gb-bar-wrap{flex:1;height:8px;background:#222;border-radius:4px;overflow:hidden}
+.gb-bar{height:100%;background:#3a7abd;border-radius:4px}
+.gb-cnt{font-size:11px;color:#555;width:18px}
+
+/* ── Tab bar ────────────────────────────────────────────── */
+.tab-bar{
+  position:fixed;
+  bottom:0;left:0;right:0;
+  height:calc(var(--tab-h) + var(--sab));
+  padding-bottom:var(--sab);
+  background:#111;
+  border-top:0.5px solid #2a2a2a;
+  display:flex;
+  z-index:30;
+}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;padding-bottom:2px;color:#555;font-size:10px;font-weight:500;transition:color .15s}
+.tab svg{width:24px;height:24px;stroke:#555;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;transition:stroke .15s}
+.tab.active{color:#6ab4ff}
+.tab.active svg{stroke:#6ab4ff}
+
+/* FAB */
+.fab{
+  position:fixed;
+  bottom:calc(var(--tab-h) + var(--sab) + 14px);
+  right:18px;
+  width:52px;height:52px;
+  border-radius:50%;
+  background:#3a7abd;
+  color:#fff;
+  font-size:26px;
+  display:none;
+  align-items:center;justify-content:center;
+  box-shadow:0 4px 16px rgba(58,122,189,0.5);
+  cursor:pointer;
+  z-index:25;
+  border:none;
+  line-height:1;
+}
+.fab.visible{display:flex}
+.fab:active{transform:scale(0.93)}
+
+/* ── Walls panel (slide in) ─────────────────────────────── */
+.wp-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:299}
+.wp-overlay.open{display:block}
+.walls-panel{position:fixed;top:0;left:0;width:min(300px,85vw);height:100%;background:#161616;border-right:0.5px solid #2a2a2a;z-index:300;display:flex;flex-direction:column;transform:translateX(-100%);transition:transform .25s ease;box-shadow:6px 0 32px rgba(0,0,0,.6)}
+.walls-panel.open{transform:translateX(0)}
+.wp-head{padding:calc(14px + var(--sat)) 16px 14px;border-bottom:0.5px solid #2a2a2a;display:flex;align-items:center;justify-content:space-between}
+.wp-head h2{font-size:17px;font-weight:700;color:#eee}
+.wp-list{flex:1;overflow-y:auto;padding:10px}
+.wcard{padding:12px;border-radius:12px;border:0.5px solid #252525;margin-bottom:8px;cursor:pointer;background:#1e1e1e;display:flex;align-items:center;gap:10px}
+.wcard.active{border-color:#3a7abd;background:#0d1f30}
+.wcard-thumb{width:48px;height:40px;border-radius:8px;background:#2a2a2a;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:20px;overflow:hidden;object-fit:cover}
+.wcard-info{flex:1;min-width:0}
+.wcard-name{font-size:13px;font-weight:600;color:#ddd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wcard-meta{font-size:11px;color:#555;margin-top:2px}
+.wcard-actions{display:flex;gap:4px}
+.wcard-btn{padding:5px 7px;border:none;background:none;cursor:pointer;color:#444;border-radius:6px;font-size:14px}
+.wcard-btn:active{color:#aaa}
+.wp-foot{padding:12px 16px calc(12px + var(--sab));border-top:0.5px solid #2a2a2a}
+.wp-foot-btn{width:100%;padding:12px;border-radius:12px;background:#1a3a1a;border:0.5px solid #3a7a3a;color:#6dbf6d;font-size:14px;font-weight:500;cursor:pointer;text-align:center}
+
+/* ── Modal ──────────────────────────────────────────────── */
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:400;align-items:flex-end;justify-content:center;padding:0}
 .modal.open{display:flex}
-.mbox{background:#1e1e1e;border-radius:12px;padding:20px;width:288px;display:flex;flex-direction:column;gap:11px;box-shadow:0 12px 40px rgba(0,0,0,.6);border:1px solid #3a3a3a}
-.mbox h3{font-size:14px;font-weight:600;color:#e8e8e6}
-.field{display:flex;flex-direction:column;gap:3px}
-.field label{font-size:11px;color:#666}
-.field input,.field select{font-size:13px;padding:5px 9px;border-radius:7px;border:1px solid #3a3a3a;background:#2a2a2a;color:#e8e8e6;width:100%}
+.mbox{background:#1c1c1e;border-radius:20px 20px 0 0;padding:20px 20px calc(20px + var(--sab));width:100%;max-width:540px;display:flex;flex-direction:column;gap:14px}
+.mbox-handle{width:36px;height:4px;background:#3a3a3a;border-radius:2px;margin:0 auto -6px}
+.mbox h3{font-size:17px;font-weight:600;color:#eee}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:12px;color:#666;font-weight:500}
+.field input,.field select{font-size:16px;padding:12px 14px;border-radius:12px;border:0.5px solid #3a3a3a;background:#2a2a2a;color:#eee;width:100%;-webkit-appearance:none}
 .field input:focus,.field select:focus{outline:none;border-color:#3a7abd}
 .field select option{background:#2a2a2a}
-.mact{display:flex;gap:7px;justify-content:flex-end}
-.save-badge{font-size:10px;color:#6dbf6d;background:#0a200a;border:1px solid #1a5a1a;border-radius:20px;padding:1px 7px}
-/* polygon */
-.poly-count{font-size:10px;background:#1a3a5c;color:#6ab4ff;border:1px solid #3a7abd;border-radius:20px;padding:1px 7px;display:none}
-/* walls panel */
-.walls-panel{position:fixed;top:0;left:0;width:260px;height:100vh;background:#1a1a1a;border-right:1px solid #2e2e2e;z-index:300;display:flex;flex-direction:column;transform:translateX(-100%);transition:transform .22s ease;box-shadow:4px 0 24px rgba(0,0,0,.5)}
-.walls-panel.open{transform:translateX(0)}
-.wp-head{padding:12px 14px;border-bottom:1px solid #2e2e2e;display:flex;align-items:center;justify-content:space-between}
-.wp-head h2{font-size:14px;font-weight:700;color:#e8e8e6}
-.wp-list{flex:1;overflow-y:auto;padding:8px}
-.wcard{padding:9px 11px;border-radius:9px;border:1px solid #2e2e2e;margin-bottom:6px;cursor:pointer;background:#1e1e1e;display:flex;align-items:center;gap:9px}
-.wcard:hover{border-color:#3a3a3a;background:#242424}
-.wcard.active{border-color:#3a7abd;background:#1a2e40}
-.wcard-thumb{width:44px;height:36px;border-radius:5px;object-fit:cover;background:#2a2a2a;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px}
-.wcard-info{flex:1;min-width:0}
-.wcard-name{font-size:12px;font-weight:600;color:#e8e8e6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.wcard-meta{font-size:10px;color:#555;margin-top:1px}
-.wcard-del{font-size:14px;color:#444;padding:2px 5px;border:none;background:none;cursor:pointer;flex-shrink:0;border-radius:5px}
-.wcard-del:hover{color:#ff6b6b;background:#3a1a1a}
-.wp-foot{padding:10px 14px;border-top:1px solid #2e2e2e}
-.wp-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:299}
-.wp-overlay.open{display:block}
-/* hold type legend */
-.legend-row{font-size:10px;color:#555;margin-top:4px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.legend-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:3px;vertical-align:middle;border:2px solid}
+.mact{display:flex;gap:10px}
+.mact button{flex:1;padding:13px;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;border:none}
+.mact-cancel{background:#2a2a2a;color:#888}
+.mact-save{background:#3a7abd;color:#fff}
+
+/* ── Phase pill (in top bar) ────────────────────────────── */
+.phase-pill{font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;border:0.5px solid}
+.pp-setup{background:#2a200a;color:#c8942a;border-color:#5a4010}
+.pp-climb{background:#0a2a0a;color:#6dbf6d;border-color:#1a5a1a}
 </style>
 </head>
 <body>
 
-<div class="tb" id="toolbar">
-  <h1>🧗</h1>
-  <button onclick="openWallsPanel()" title="Switch wall" style="padding:3px 7px">🏔 <span id="wallNameTag">Walls</span> ▾</button>
-  <button onclick="document.getElementById('fi').click()">📷 Load</button>
-  <input type="file" id="fi" accept="image/*" style="display:none" onchange="loadPhoto(event)">
-  <div class="sep"></div>
-
-  <!-- SETUP controls -->
-  <span class="phase-pill pp-setup" id="pillSetup" style="display:none">Setup</span>
-  <span class="poly-count" id="polyCount"></span>
-  <button id="btnUndo" onclick="undoStep()" style="display:none" class="red">↩ Undo</button>
-  <button id="btnClear" onclick="clearPaint(true)" style="display:none" class="red">✕ Clear</button>
-  <button id="btnPolyClose" onclick="closePolygon()" style="display:none" class="green">Close polygon</button>
-  <div class="sep" id="sepDone" style="display:none"></div>
-  <button id="btnDoneSetup" onclick="finishSetup()" style="display:none" class="green">✓ Done (<span id="holdCountTb">0</span>)</button>
-  <button id="btnResetSetup" onclick="resetSetup()" style="display:none" class="red" title="Re-setup holds">⚙ Reset</button>
-
-  <!-- CLIMB controls -->
-  <span class="phase-pill pp-climb" id="pillClimb" style="display:none">Climbs</span>
-  <button id="btnPlace" class="on" onclick="setMode('place')" style="display:none">📍 Place</button>
-  <button id="btnView"  onclick="setMode('view')"  style="display:none">👁 View</button>
-  <span class="lbl" id="lblHoldType" style="display:none">Type:</span>
-  <button id="btnTypeHand"   onclick="setHoldType('hand')"   class="on" style="display:none">✋ Hand</button>
-  <button id="btnTypeFoot"   onclick="setHoldType('foot')"   style="display:none">🦶 Foot</button>
-  <button id="btnTypeStart"  onclick="setHoldType('start')"  style="display:none">🟢 Start</button>
-  <button id="btnTypeFinish" onclick="setHoldType('finish')" style="display:none">🔴 Finish</button>
-  <button id="btnDoneSelecting" onclick="doneSelecting()" class="green" style="display:none">✓ Done</button>
-  <div class="sep" id="sepNew" style="display:none"></div>
-  <button id="btnNew" onclick="openModal()" style="display:none">＋ New climb</button>
-
-  <div class="sep"></div>
-  <button onclick="exportData()" title="Export JSON">⬇</button>
-  <button onclick="document.getElementById('importFile').click()" title="Import JSON">⬆</button>
-  <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
-  <span class="save-badge" id="saveBadge" style="display:none">Saved ✓</span>
-</div>
-
-<div class="wp-overlay" id="wpOverlay" onclick="closeWallsPanel()"></div>
-<div class="walls-panel" id="wallsPanel">
-  <div class="wp-head">
-    <h2>My Walls</h2>
-    <button onclick="closeWallsPanel()" style="padding:3px 8px;font-size:13px">✕</button>
+<!-- ── Top bar ─────────────────────────────────────────── -->
+<div class="top-bar">
+  <div class="top-bar-left">
+    <div class="wall-chip" onclick="openWallsPanel()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l4-8 4 4 4-6 4 10"/></svg>
+      <span id="wallNameTag">Walls</span>
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <span class="phase-pill pp-setup" id="pillSetup" style="display:none">Setup</span>
+    <span class="phase-pill pp-climb" id="pillClimb" style="display:none">Climbs</span>
   </div>
-  <div class="wp-list" id="wpList"></div>
-  <div class="wp-foot">
-    <button class="green" style="width:100%;justify-content:center" onclick="newWall()">＋ Add new wall</button>
+  <div class="top-bar-right">
+    <span class="sync-badge" id="saveBadge" style="display:none"></span>
+    <div class="icon-btn" onclick="exportData()" title="Export">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    </div>
   </div>
 </div>
 
-<div class="main">
+<!-- ── Tab contents ────────────────────────────────────── -->
+
+<!-- Wall tab (canvas) -->
+<div class="tab-content active" id="tab-wall">
   <div class="canvas-area" id="ca">
     <div class="nophoto" id="np" onclick="document.getElementById('fi').click()">
-      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#444" stroke-width="1.4">
-        <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
-      </svg>
-      <span style="color:#aaa">Click to load wall photo</span>
-      <span style="font-size:11px;color:#333">Polygon-trace each hold to map your wall</span>
+      <div class="nophoto-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      </div>
+      <p>Load your wall photo</p>
+      <small>Tap to choose a photo, then polygon-trace each hold</small>
     </div>
     <div class="canvas-wrap" id="cw" style="display:none">
       <canvas id="wallCanvas"></canvas>
@@ -163,26 +301,32 @@ canvas{display:block}
       <canvas id="cursorCanvas"></canvas>
     </div>
   </div>
+</div>
 
-  <div class="sidebar">
-    <div class="sh">
-      <span id="sideTitle">Climbs</span>
-      <span id="sideCnt" style="font-weight:400;color:#aaa;font-size:11px"></span>
+<!-- Climbs tab -->
+<div class="tab-content" id="tab-climbs">
+  <div class="climbs-tab" style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+    <div class="climbs-header">
+      <h2>Climbs <span id="sideCnt" style="font-size:14px;font-weight:400;color:#555"></span></h2>
     </div>
-    <div class="clist" id="clist"><div class="empty">Load a wall photo to begin.</div></div>
-    <div class="dp" id="dp" style="display:none">
-      <div class="dr"><span>Grade</span><span class="dv" id="dg">—</span></div>
-      <div class="dr"><span>FA</span><span class="dv" id="dfa" style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">—</span></div>
-      <div class="dr"><span>Hand / Foot</span><span class="dv" id="dh">—</span></div>
-      <div class="dr"><span>Start / Finish</span><span class="dv" id="df">—</span></div>
-      <div class="dr"><span>Attempts</span><span class="dv" id="da">—</span></div>
-      <div class="dr"><span>Sends</span><span class="dv" id="ds">—</span></div>
-      <div class="dbtns">
-        <button onclick="enterEditHolds()" title="Edit holds" style="font-size:11px">✏ Holds</button>
-        <button onclick="logAttempt()">🎯</button>
-        <button onclick="logSend()" style="color:#2e7d32;border-color:#a5d6a7">✓</button>
-        <button onclick="editClimb()" title="Edit name/grade">⚙</button>
-        <button class="red" onclick="delClimb()">🗑</button>
+    <div class="climbs-list" id="clist">
+      <div class="empty">No climbs yet.<br>Map your holds first, then tap<br>＋ to create a climb.</div>
+    </div>
+    <div class="detail-sheet" id="dp">
+      <h3 id="dp-name">—</h3>
+      <div class="detail-grid">
+        <div class="detail-cell"><div class="lbl">Grade</div><div class="val" id="dg">—</div></div>
+        <div class="detail-cell"><div class="lbl">FA</div><div class="val" id="dfa" style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">—</div></div>
+        <div class="detail-cell"><div class="lbl">Attempts</div><div class="val" id="da">—</div></div>
+        <div class="detail-cell"><div class="lbl">Sends</div><div class="val" id="ds">—</div></div>
+      </div>
+      <div class="detail-cell" style="margin-bottom:12px"><div class="lbl">Holds</div><div class="val" style="font-size:13px;font-weight:400;color:#aaa" id="dh">—</div></div>
+      <div class="detail-actions">
+        <button class="dbtn-attempt" onclick="logAttempt()">🎯 Attempt</button>
+        <button class="dbtn-send" onclick="logSend()">✓ Send</button>
+        <button class="dbtn-holds" onclick="enterEditHolds()">✏ Holds</button>
+        <button class="dbtn-edit" onclick="editClimb()">⚙</button>
+        <button class="dbtn-del" onclick="delClimb()">🗑</button>
       </div>
       <div class="legend-row">
         <span><span class="legend-dot" style="background:#6ab4ff44;border-color:#6ab4ff"></span>Hand</span>
@@ -193,10 +337,130 @@ canvas{display:block}
     </div>
   </div>
 </div>
-<div class="hint" id="hint">Load a wall photo to get started.</div>
 
+<!-- Setup tab -->
+<div class="tab-content" id="tab-setup">
+  <div class="setup-tab">
+    <div class="setup-section">
+      <h3>Wall photo</h3>
+      <div class="setup-row" onclick="document.getElementById('fi').click()">
+        <div class="setup-row-left">
+          <div class="setup-row-title">Load / replace photo</div>
+          <div class="setup-row-sub" id="photoStatus">No photo loaded</div>
+        </div>
+        <div class="setup-row-right"><span>📷</span><span class="arrow">›</span></div>
+      </div>
+    </div>
+    <div class="setup-section">
+      <h3>Hold mapping</h3>
+      <div class="setup-row" id="setupStartRow" onclick="goMapHolds()">
+        <div class="setup-row-left">
+          <div class="setup-row-title">Map holds</div>
+          <div class="setup-row-sub" id="holdStatus">No holds mapped yet</div>
+        </div>
+        <div class="setup-row-right"><span>⬡</span><span class="arrow">›</span></div>
+      </div>
+      <div class="setup-row" id="setupResetRow" onclick="resetSetup()" style="display:none">
+        <div class="setup-row-left">
+          <div class="setup-row-title" style="color:#ff6b6b">Reset hold map</div>
+          <div class="setup-row-sub">Clear all holds and climbs</div>
+        </div>
+        <div class="setup-row-right"><span class="arrow">›</span></div>
+      </div>
+    </div>
+    <div class="setup-section">
+      <h3>Data</h3>
+      <div class="setup-row" onclick="exportData()">
+        <div class="setup-row-left">
+          <div class="setup-row-title">Export wall data</div>
+          <div class="setup-row-sub">Download JSON backup</div>
+        </div>
+        <div class="setup-row-right"><span>⬇</span><span class="arrow">›</span></div>
+      </div>
+      <div class="setup-row" onclick="document.getElementById('importFile').click()">
+        <div class="setup-row-left">
+          <div class="setup-row-title">Import wall data</div>
+          <div class="setup-row-sub">Restore from JSON</div>
+        </div>
+        <div class="setup-row-right"><span>⬆</span><span class="arrow">›</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Stats tab -->
+<div class="tab-content" id="tab-stats">
+  <div class="stats-tab" id="statsContent"></div>
+</div>
+
+<!-- ── Context action bars ─────────────────────────────── -->
+
+<!-- Setup mapping bar -->
+<div class="action-bar" id="actionSetup">
+  <span class="poly-count-pill" id="polyCount"></span>
+  <button class="abtn" onclick="undoStep()">↩ Undo</button>
+  <button class="abtn" onclick="clearPaint(true)">✕ Clear</button>
+  <button class="abtn green" id="btnPolyClose" onclick="closePolygon()" style="display:none">Close polygon</button>
+  <div style="flex:1"></div>
+  <button class="abtn green" onclick="finishSetup()">✓ Done (<span id="holdCountTb">0</span>)</button>
+</div>
+
+<!-- Climb placing bar -->
+<div class="action-bar" id="actionClimb">
+  <div class="type-group">
+    <button class="tbtn on on-hand" id="btnTypeHand"   onclick="setHoldType('hand')">✋</button>
+    <button class="tbtn" id="btnTypeFoot"   onclick="setHoldType('foot')">🦶</button>
+    <button class="tbtn" id="btnTypeStart"  onclick="setHoldType('start')">🟢</button>
+    <button class="tbtn" id="btnTypeFinish" onclick="setHoldType('finish')">🔴</button>
+  </div>
+  <div style="flex:1"></div>
+  <button class="abtn green" onclick="doneSelecting()">✓ Done</button>
+</div>
+
+<!-- ── FAB ────────────────────────────────────────────── -->
+<button class="fab" id="fab" onclick="openModal()">＋</button>
+
+<!-- ── Tab bar ───────────────────────────────────────── -->
+<div class="tab-bar">
+  <div class="tab active" id="tabn-wall" onclick="switchTab('wall')">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+    Wall
+  </div>
+  <div class="tab" id="tabn-climbs" onclick="switchTab('climbs')">
+    <svg viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+    Climbs
+  </div>
+  <div class="tab" id="tabn-setup" onclick="switchTab('setup')">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    Setup
+  </div>
+  <div class="tab" id="tabn-stats" onclick="switchTab('stats')">
+    <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    Stats
+  </div>
+</div>
+
+<!-- ── Walls panel ────────────────────────────────────── -->
+<div class="wp-overlay" id="wpOverlay" onclick="closeWallsPanel()"></div>
+<div class="walls-panel" id="wallsPanel">
+  <div class="wp-head">
+    <h2>My Walls</h2>
+    <button onclick="closeWallsPanel()" style="background:none;border:none;color:#888;font-size:20px;cursor:pointer;padding:4px">✕</button>
+  </div>
+  <div class="wp-list" id="wpList"></div>
+  <div class="wp-foot">
+    <button class="wp-foot-btn" onclick="newWall()">＋ Add new wall</button>
+  </div>
+</div>
+
+<!-- file inputs -->
+<input type="file" id="fi" accept="image/*" style="display:none" onchange="loadPhoto(event)">
+<input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+
+<!-- ── Modal (bottom sheet style) ────────────────────── -->
 <div class="modal" id="modal">
   <div class="mbox">
+    <div class="mbox-handle"></div>
     <h3 id="modalTitle">New climb</h3>
     <div class="field"><label>Name</label><input id="iName" placeholder="e.g. Pinchy traverse"></div>
     <div class="field"><label>Grade</label>
@@ -209,8 +473,8 @@ canvas{display:block}
     </div>
     <div class="field"><label>FA (First Ascent)</label><input id="iFA" placeholder="e.g. Louis Manley"></div>
     <div class="mact">
-      <button onclick="closeModal()">Cancel</button>
-      <button class="green" id="modalSaveBtn" onclick="modalSave()">Create &amp; place holds</button>
+      <button class="mact-cancel" onclick="closeModal()">Cancel</button>
+      <button class="mact-save" id="modalSaveBtn" onclick="modalSave()">Create &amp; place holds</button>
     </div>
   </div>
 </div>
@@ -978,93 +1242,197 @@ function startGlow(){
 }
 function stopGlow(){ if(animFrame){cancelAnimationFrame(animFrame);animFrame=null;} glowPhase=0; }
 
-// ─── Phase & toolbar visibility ───────────────────────────────────────────────
+// ─── Tab navigation ───────────────────────────────────────────────────────────
+var currentTab='wall';
+function switchTab(name){
+  currentTab=name;
+  ['wall','climbs','setup','stats'].forEach(function(t){
+    document.getElementById('tab-'+t).classList.toggle('active',t===name);
+    document.getElementById('tabn-'+t).classList.toggle('active',t===name);
+  });
+  // FAB only on climbs tab when in climb phase
+  var showFab=name==='climbs'&&phase==='climb';
+  var fab=document.getElementById('fab');
+  fab.classList.toggle('visible',showFab);
+  // Action bars
+  document.getElementById('actionSetup').classList.toggle('visible', name==='wall'&&phase==='setup');
+  document.getElementById('actionClimb').classList.toggle('visible', name==='wall'&&phase==='climb'&&climbMode==='place'&&!!active);
+  if(name==='stats') renderStats();
+  if(name==='setup') updateSetupTab();
+  if(name==='wall'&&phase==='climb'&&active) hint('Tap holds to assign them. Use type buttons to set Hand · Foot · Start · Finish.');
+}
+
+function goMapHolds(){
+  if(!wallImg){ hint('Load a photo first.'); switchTab('wall'); return; }
+  switchTab('wall');
+  setPhase('setup');
+}
+
+function updateSetupTab(){
+  var photoEl=document.getElementById('photoStatus');
+  var holdEl=document.getElementById('holdStatus');
+  var resetRow=document.getElementById('setupResetRow');
+  if(photoEl) photoEl.textContent=wallDataUrl?'Photo loaded':'No photo loaded';
+  if(holdEl) holdEl.textContent=holds.length>0?holds.length+' holds mapped':'No holds mapped yet';
+  if(resetRow) resetRow.style.display=holds.length>0?'':'none';
+}
+
+// ─── Phase management (tab-aware) ────────────────────────────────────────────
 function setPhase(p){
   phase=p;
   var s=p==='setup', c=p==='climb';
-  var setupIds=['pillSetup','btnUndo','btnClear','btnPolyClose','sepDone','btnDoneSetup','btnResetSetup'];
-  var climbIds=['pillClimb','btnPlace','btnView','sepNew','btnNew'];
-  setupIds.forEach(function(id){sh(id,s);});
-  climbIds.forEach(function(id){sh(id,c);});
-  sh('btnDoneSelecting',false);
-  sh('lblHoldType',false);
-  sh('btnTypeHand',false);
-  sh('btnTypeFoot',false);
-  sh('btnPolyClose',false); // shown only when poly active
-  sh('polyCount',false);
+  var el;
+  el=document.getElementById('pillSetup'); if(el) el.style.display=s?'':'none';
+  el=document.getElementById('pillClimb'); if(el) el.style.display=c?'':'none';
   document.getElementById('paintCanvas').style.pointerEvents=s?'auto':'none';
   document.getElementById('paintCanvas').style.cursor=s?'crosshair':'default';
   document.getElementById('overlayCanvas').style.pointerEvents=c?'auto':'none';
   document.getElementById('overlayCanvas').style.cursor=c?'crosshair':'default';
-  document.getElementById('sideTitle').textContent=s?'Holds':'Climbs';
   document.getElementById('holdCountTb').textContent=holds.length;
+  document.getElementById('actionSetup').classList.toggle('visible', s&&currentTab==='wall');
+  document.getElementById('actionClimb').classList.toggle('visible', false);
+  var fab=document.getElementById('fab');
+  fab.classList.toggle('visible', c&&currentTab==='climbs');
   if(s){
-    document.getElementById('clist').innerHTML='<div class="empty">Click to place polygon vertices.<br>Double-click to close &amp; save each hold.<br><br>Click a saved outline to delete it.</div>';
-    document.getElementById('dp').style.display='none';
     polyPts=[];
+    document.getElementById('clist').innerHTML='<div class="empty">Holding map in progress.<br>Switch to Wall tab to trace holds.</div>';
+    var dpEl=document.getElementById('dp'); if(dpEl) dpEl.classList.remove('visible');
   } else {
     renderList();
   }
   updateSideCnt();
+  updateSetupTab();
 }
 function sh(id,v){ var el=document.getElementById(id); if(el) el.style.display=v?'':'none'; }
 function updateSideCnt(){
-  document.getElementById('sideCnt').textContent=phase==='setup'?'('+holds.length+' holds)':'('+climbs.length+')';
+  var el=document.getElementById('sideCnt');
+  if(el) el.textContent='('+climbs.length+')';
 }
 
 // ─── Setup actions ────────────────────────────────────────────────────────────
 function finishSetup(){
   if(!holds.length){ hint('Trace and save at least one hold first.'); return; }
   save(); setPhase('climb'); drawWall(); drawOverlay();
-  hint(holds.length+' holds confirmed. Create a climb and tap holds to build routes.');
+  switchTab('climbs');
+  hint(holds.length+' holds saved. Create a climb and tap holds to build routes.');
 }
 function resetSetup(){
   if(!confirm('Clear all climbs and re-trace holds for this wall?')) return;
   climbs=[]; active=null; holds=[]; stopGlow(); clearPaint(false);
-  setPhase('setup'); drawWall(); drawOverlay(); save();
+  setPhase('setup'); drawWall(); drawOverlay(); save(); switchTab('wall');
 }
 
 // ─── Climb mode ───────────────────────────────────────────────────────────────
 function setMode(m){
   climbMode=m;
   var placing=m==='place'&&!!active;
-  document.getElementById('btnPlace').classList.toggle('on',m==='place');
-  document.getElementById('btnView').classList.toggle('on',m==='view');
   document.getElementById('overlayCanvas').style.cursor=m==='place'?'crosshair':'default';
-  sh('btnDoneSelecting', placing);
-  sh('lblHoldType', placing);
-  sh('btnTypeHand',   placing);
-  sh('btnTypeFoot',   placing);
-  sh('btnTypeStart',  placing);
-  sh('btnTypeFinish', placing);
-  hint(m==='place'?(active?'Tap holds to assign. Choose type: Hand · Foot · Start · Finish.':'Select or create a climb first.'):'Select a climb to highlight its holds.');
+  document.getElementById('actionClimb').classList.toggle('visible', placing&&currentTab==='wall');
 }
 
 function setHoldType(t){
   holdType=t;
+  var classes={hand:'on-hand',foot:'on-foot',start:'on-start',finish:'on-finish'};
   ['btnTypeHand','btnTypeFoot','btnTypeStart','btnTypeFinish'].forEach(function(id){
-    var el=document.getElementById(id); if(el) el.classList.remove('on');
+    var el=document.getElementById(id); if(!el) return;
+    el.classList.remove('on','on-hand','on-foot','on-start','on-finish');
   });
   var map={hand:'btnTypeHand',foot:'btnTypeFoot',start:'btnTypeStart',finish:'btnTypeFinish'};
-  var el=document.getElementById(map[t]); if(el) el.classList.add('on');
-  var labels={hand:'✋ hand',foot:'🦶 foot',start:'🟢 start',finish:'🔴 finish'};
-  hint('Now placing: '+labels[t]+' holds. Tap holds on the wall.');
+  var el=document.getElementById(map[t]);
+  if(el){ el.classList.add('on', classes[t]); }
 }
 
 function enterEditHolds(){
   if(!active) return;
+  switchTab('wall');
   setMode('place');
-  hint('Edit mode — tap holds to add/remove. Change type with Hand/Foot. ✓ Done when finished.');
+  hint('Tap holds to add/remove. Use type buttons. ✓ Done when finished.');
 }
 
 function doneSelecting(){
-  active=null; stopGlow(); setMode('view');
-  sh('btnDoneSelecting',false); sh('lblHoldType',false);
-  sh('btnTypeHand',false); sh('btnTypeFoot',false);
-  sh('btnTypeStart',false); sh('btnTypeFinish',false);
+  active=null; stopGlow();
+  climbMode='view';
+  document.getElementById('actionClimb').classList.remove('visible');
+  sh('btnDoneSelecting',false);
   renderList(); updateDetail(); drawWall(); drawOverlay();
-  hint('Climb saved. Select another climb or create a new one.');
+  hint('Climb saved. Select another or create a new one.');
 }
+
+// ─── Sidebar / climb list ────────────────────────────────────────────────────
+function renderList(){
+  updateSideCnt();
+  var el=document.getElementById('clist');
+  if(!climbs.length){
+    el.innerHTML='<div class="empty">No climbs yet.<br>Tap ＋ to create your first climb.</div>';
+    var dpEl=document.getElementById('dp'); if(dpEl) dpEl.classList.remove('visible');
+    return;
+  }
+  el.innerHTML=climbs.map(function(cl){
+    var sent=cl.sends>0;
+    var sp=sent?'<span class="cpill cps">Sent '+cl.sends+'×</span>':'<span class="cpill cpp">Project</span>';
+    var fa=cl.fa?'<span style="color:#444">FA: '+esc(cl.fa)+'</span>':'';
+    return '<div class="ccard'+(cl.id===active?' sel':'')+'" onclick="selClimb(\''+cl.id+'\')">'
+      +'<div class="cn">'+esc(cl.name)+'</div>'
+      +'<div class="cm"><span class="cpill cpg">'+cl.grade+'</span>'+sp
+      +'<span>'+cl.holds.length+' holds</span>'+fa+'</div>'
+      +'</div>';
+  }).join('');
+}
+
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function selClimb(id){
+  active=id; renderList(); updateDetail();
+  drawWall(); drawOverlay();
+  if(active){ startGlow(); setMode('place'); }
+  else { stopGlow(); document.getElementById('actionClimb').classList.remove('visible'); }
+}
+
+function updateDetail(){
+  var cl=climbs.find(function(c){return c.id===active;});
+  var dp=document.getElementById('dp');
+  if(!cl){ if(dp) dp.classList.remove('visible'); return; }
+  if(dp) dp.classList.add('visible');
+  function count(t){ return cl.holds.filter(function(e){return (e.type||'hand')===t;}).length; }
+  var dpName=document.getElementById('dp-name'); if(dpName) dpName.textContent=cl.name;
+  document.getElementById('dg').textContent=cl.grade;
+  var dfaEl=document.getElementById('dfa'); if(dfaEl) dfaEl.textContent=cl.fa||'—';
+  document.getElementById('da').textContent=cl.attempts;
+  document.getElementById('ds').textContent=cl.sends;
+  var dhEl=document.getElementById('dh');
+  if(dhEl) dhEl.textContent=count('hand')+' hand · '+count('foot')+' foot · '+count('start')+' start · '+count('finish')+' finish';
+}
+
+// ─── Stats tab ────────────────────────────────────────────────────────────────
+function renderStats(){
+  var el=document.getElementById('statsContent');
+  if(!el) return;
+  var totalSends=climbs.reduce(function(a,c){return a+c.sends;},0);
+  var totalAttempts=climbs.reduce(function(a,c){return a+c.attempts;},0);
+  var sent=climbs.filter(function(c){return c.sends>0;}).length;
+  // Grade pyramid
+  var grades=['VB','V0','V1','V2','V3','V4','V5','V6','V7','V8','V9','V10','V11','V12'];
+  var gradeCounts={};
+  grades.forEach(function(g){gradeCounts[g]=0;});
+  climbs.forEach(function(c){ if(gradeCounts[c.grade]!==undefined) gradeCounts[c.grade]++; });
+  var maxGradeCount=Math.max(1,Math.max.apply(null,grades.map(function(g){return gradeCounts[g];})));
+  var barsHtml=grades.filter(function(g){return gradeCounts[g]>0;}).map(function(g){
+    var pct=Math.round(gradeCounts[g]/maxGradeCount*100);
+    return '<div class="gb-row"><div class="gb-lbl">'+g+'</div>'
+      +'<div class="gb-bar-wrap"><div class="gb-bar" style="width:'+pct+'%"></div></div>'
+      +'<div class="gb-cnt">'+gradeCounts[g]+'</div></div>';
+  }).join('');
+  el.innerHTML='<div class="stat-grid">'
+    +'<div class="stat-card"><div class="sc-val">'+climbs.length+'</div><div class="sc-lbl">Total climbs</div></div>'
+    +'<div class="stat-card"><div class="sc-val">'+sent+'</div><div class="sc-lbl">Sent</div></div>'
+    +'<div class="stat-card"><div class="sc-val">'+totalSends+'</div><div class="sc-lbl">Total sends</div></div>'
+    +'<div class="stat-card"><div class="sc-val">'+totalAttempts+'</div><div class="sc-lbl">Total attempts</div></div>'
+    +'</div>'
+    +(barsHtml?'<div class="grade-bars"><h4>Grade pyramid</h4>'+barsHtml+'</div>':'')
+    +'<div class="empty" style="color:#333;padding:20px 0;font-size:12px">'+holds.length+' holds mapped on this wall</div>';
+}
+
+function hint(t){ /* hint bar removed in tab UI — no-op */ console.log('[hint]',t); }
 
 // ─── Modal — shared for create & edit ────────────────────────────────────────
 var modalMode='create'; // 'create' | 'edit'
@@ -1110,7 +1478,7 @@ function saveClimb(){
   climbs.push({id:id,name:name,grade:grade,fa:fa,holds:[],attempts:0,sends:0,created:new Date().toISOString()});
   closeModal(); active=id; setMode('place');
   renderList(); updateDetail(); save(); startGlow();
-  hint('Tap holds on the wall to build "'+name+'". ✓ Done selecting when finished.');
+  switchTab('wall');
 }
 
 function updateClimb(){
@@ -1123,42 +1491,9 @@ function updateClimb(){
   hint('"'+cl.name+'" updated.');
 }
 
-// ─── Sidebar ──────────────────────────────────────────────────────────────────
-function renderList(){
-  updateSideCnt();
-  var el=document.getElementById('clist');
-  if(!climbs.length){ el.innerHTML='<div class="empty">No climbs yet.<br>Tap ＋ New climb.</div>'; return; }
-  el.innerHTML=climbs.map(function(cl){
-    var sent=cl.sends>0;
-    var sp=sent?'<span class="cpill cps">Sent '+cl.sends+'×</span>':'<span class="cpill cpp">Project</span>';
-    return '<div class="ccard'+(cl.id===active?' sel':'')+'" onclick="selClimb(\''+cl.id+'\')">'
-      +'<div class="cn">'+esc(cl.name)+'</div>'
-      +'<div class="cm"><span class="cpill cpg">'+cl.grade+'</span>'+sp+'<span>'+cl.holds.length+' holds</span>'+(cl.fa?'<span style="color:#555">FA: '+esc(cl.fa)+'</span>':'')+(cl.attempts?'<span>'+cl.attempts+' att.</span>':'')+'</div>'
-      +'</div>';
-  }).join('');
-}
-function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function selClimb(id){
-  active=id; renderList(); updateDetail();
-  drawWall(); drawOverlay();
-  if(active){ startGlow(); setMode(climbMode); } else { stopGlow(); sh('btnDoneSelecting',false); drawOverlay(); }
-  hint(active?'Tap holds to add/remove. ✓ Done selecting when finished.':'');
-}
-function updateDetail(){
-  var cl=climbs.find(function(c){return c.id===active;});
-  var dp=document.getElementById('dp');
-  if(!cl){ dp.style.display='none'; return; }
-  dp.style.display='flex';
-  function count(t){ return cl.holds.filter(function(e){return (e.type||'hand')===t;}).length; }
-  document.getElementById('dg').textContent=cl.grade;
-  document.getElementById('dfa').textContent=cl.fa||'—';
-  document.getElementById('dh').textContent=count('hand')+' hand / '+count('foot')+' foot';
-  document.getElementById('df').textContent=count('start')+' start / '+count('finish')+' finish';
-  document.getElementById('da').textContent=cl.attempts;
-  document.getElementById('ds').textContent=cl.sends;
-}
-function logAttempt(){ var cl=climbs.find(function(c){return c.id===active;}); if(!cl)return; cl.attempts++; updateDetail(); renderList(); save(); hint('Attempt logged — total: '+cl.attempts); }
-function logSend(){ var cl=climbs.find(function(c){return c.id===active;}); if(!cl)return; cl.sends++; cl.attempts=Math.max(cl.attempts,cl.sends); updateDetail(); renderList(); save(); hint('🎉 Send! Total: '+cl.sends); }
+// ─── Climb actions ────────────────────────────────────────────────────────────
+function logAttempt(){ var cl=climbs.find(function(c){return c.id===active;}); if(!cl)return; cl.attempts++; updateDetail(); renderList(); save(); }
+function logSend(){ var cl=climbs.find(function(c){return c.id===active;}); if(!cl)return; cl.sends++; cl.attempts=Math.max(cl.attempts,cl.sends); updateDetail(); renderList(); save(); }
 function delClimb(){
   if(!active)return;
   var cl=climbs.find(function(c){return c.id===active;});
@@ -1185,28 +1520,23 @@ function importData(e){
     try{
       var d=JSON.parse(ev.target.result);
       if(d.wall){
-        // Import a full wall
         var w=d.wall;
-        w.id='wall_'+Date.now(); // new id to avoid collision
+        w.id='wall_'+Date.now();
         walls.push(w);
         saveAllWalls();
         loadWallById(w.id,false);
-        hint('Imported wall "'+w.name+'" with '+w.holds.length+' holds, '+w.climbs.length+' climbs.');
       } else {
-        // Legacy import — merge into current wall
         if(d.climbs) climbs=d.climbs;
         if(d.holds) holds=d.holds;
         active=null;
         setPhase(holds.length>0?'climb':'setup');
         renderList(); updateDetail(); drawWall(); drawOverlay(); save();
-        hint('Imported '+climbs.length+' climb(s), '+holds.length+' holds into current wall.');
       }
-    }catch(e){ hint('Could not read file.'); }
+    }catch(e){ console.warn('Import failed',e); }
   };
   reader.readAsText(f);
 }
 
-function hint(t){ document.getElementById('hint').textContent=t; }
 window.addEventListener('resize',function(){ if(wallImg){ sizeCanvases(); drawOverlay(); } });
 </script>
 <script>
