@@ -1,0 +1,1222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Spray Wall">
+  <meta name="theme-color" content="#1a1a1a">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="icon-152.png">
+  <link rel="apple-touch-icon" sizes="120x120" href="icon-120.png">
+<title>Spray Wall Logger</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0d0d0d;color:#e8e8e6;min-height:100vh;display:flex;flex-direction:column}
+.tb{display:flex;align-items:center;gap:6px;padding:7px 11px;background:#1a1a1a;border-bottom:1px solid #2e2e2e;flex-wrap:wrap;min-height:42px}
+.tb h1{font-size:14px;font-weight:700;color:#e8e8e6}
+.sep{width:1px;height:20px;background:#2e2e2e;margin:0 1px;flex-shrink:0}
+.lbl{font-size:11px;color:#666;white-space:nowrap}
+button{font-size:12px;padding:4px 9px;border-radius:7px;border:1px solid #3a3a3a;background:#242424;color:#d0d0ce;cursor:pointer;display:inline-flex;align-items:center;gap:3px;line-height:1;white-space:nowrap;transition:background .12s}
+button:hover{background:#2e2e2e;border-color:#4a4a4a}
+button.on{background:#1a3a5c;border-color:#3a7abd;color:#6ab4ff}
+button.red{border-color:#7a2020;color:#ff6b6b}
+button.red:hover{background:#3a1a1a}
+button.green{background:#1a3a1a;border-color:#3a7a3a;color:#6dbf6d}
+button.green:hover{background:#223a22}
+button:disabled{opacity:0.3;cursor:default;pointer-events:none}
+.phase-pill{font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;border:1px solid}
+.pp-setup{background:#2a200a;color:#c8942a;border-color:#5a4010}
+.pp-climb{background:#0a2a0a;color:#6dbf6d;border-color:#1a5a1a}
+/* layout */
+.main{display:flex;flex:1;height:calc(100vh - 86px)}
+.canvas-area{flex:1;position:relative;background:#0a0a0a;display:flex;align-items:center;justify-content:center;overflow:hidden;user-select:none}
+.canvas-wrap{position:relative;display:inline-block;line-height:0}
+canvas{display:block}
+#paintCanvas{position:absolute;top:0;left:0}
+#overlayCanvas{position:absolute;top:0;left:0;pointer-events:none}
+#cursorCanvas{position:absolute;top:0;left:0;pointer-events:none}
+.nophoto{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:#444;font-size:14px;cursor:pointer;width:100%;height:100%;min-height:400px}
+/* sidebar */
+.sidebar{width:218px;border-left:1px solid #2e2e2e;display:flex;flex-direction:column;background:#161616;flex-shrink:0}
+.sh{padding:8px 12px;border-bottom:1px solid #2e2e2e;font-size:13px;font-weight:600;color:#e8e8e6;display:flex;justify-content:space-between;align-items:center}
+.clist{flex:1;overflow-y:auto;padding:5px}
+.ccard{padding:7px 9px;border-radius:8px;border:1px solid #2e2e2e;margin-bottom:4px;cursor:pointer;background:#1e1e1e}
+.ccard:hover{border-color:#3a3a3a}
+.ccard.sel{border-color:#3a7abd;background:#1a2e40}
+.cn{font-size:12px;font-weight:600;color:#e8e8e6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cm{font-size:10px;color:#666;margin-top:2px;display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+.cpill{font-size:10px;padding:1px 5px;border-radius:20px;font-weight:500;border:1px solid}
+.cpg{background:#0a1e30;color:#6ab4ff;border-color:#1a4a7a}
+.cps{background:#0a200a;color:#6dbf6d;border-color:#1a5a1a}
+.cpp{background:#20180a;color:#c8942a;border-color:#5a3a10}
+.dp{padding:8px 12px;border-top:1px solid #2e2e2e;font-size:11px;color:#666;display:flex;flex-direction:column;gap:4px}
+.dr{display:flex;justify-content:space-between}
+.dv{font-size:12px;font-weight:600;color:#e8e8e6}
+.dbtns{display:flex;gap:4px;margin-top:3px}
+.dbtns button{flex:1;font-size:11px;padding:4px 2px;justify-content:center}
+.hint{font-size:11px;color:#555;padding:5px 12px;background:#111;border-top:1px solid #222;min-height:25px}
+.empty{padding:14px;text-align:center;font-size:11px;color:#444;line-height:1.8}
+/* modal */
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center}
+.modal.open{display:flex}
+.mbox{background:#1e1e1e;border-radius:12px;padding:20px;width:288px;display:flex;flex-direction:column;gap:11px;box-shadow:0 12px 40px rgba(0,0,0,.6);border:1px solid #3a3a3a}
+.mbox h3{font-size:14px;font-weight:600;color:#e8e8e6}
+.field{display:flex;flex-direction:column;gap:3px}
+.field label{font-size:11px;color:#666}
+.field input,.field select{font-size:13px;padding:5px 9px;border-radius:7px;border:1px solid #3a3a3a;background:#2a2a2a;color:#e8e8e6;width:100%}
+.field input:focus,.field select:focus{outline:none;border-color:#3a7abd}
+.field select option{background:#2a2a2a}
+.mact{display:flex;gap:7px;justify-content:flex-end}
+.save-badge{font-size:10px;color:#6dbf6d;background:#0a200a;border:1px solid #1a5a1a;border-radius:20px;padding:1px 7px}
+/* polygon */
+.poly-count{font-size:10px;background:#1a3a5c;color:#6ab4ff;border:1px solid #3a7abd;border-radius:20px;padding:1px 7px;display:none}
+/* walls panel */
+.walls-panel{position:fixed;top:0;left:0;width:260px;height:100vh;background:#1a1a1a;border-right:1px solid #2e2e2e;z-index:300;display:flex;flex-direction:column;transform:translateX(-100%);transition:transform .22s ease;box-shadow:4px 0 24px rgba(0,0,0,.5)}
+.walls-panel.open{transform:translateX(0)}
+.wp-head{padding:12px 14px;border-bottom:1px solid #2e2e2e;display:flex;align-items:center;justify-content:space-between}
+.wp-head h2{font-size:14px;font-weight:700;color:#e8e8e6}
+.wp-list{flex:1;overflow-y:auto;padding:8px}
+.wcard{padding:9px 11px;border-radius:9px;border:1px solid #2e2e2e;margin-bottom:6px;cursor:pointer;background:#1e1e1e;display:flex;align-items:center;gap:9px}
+.wcard:hover{border-color:#3a3a3a;background:#242424}
+.wcard.active{border-color:#3a7abd;background:#1a2e40}
+.wcard-thumb{width:44px;height:36px;border-radius:5px;object-fit:cover;background:#2a2a2a;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px}
+.wcard-info{flex:1;min-width:0}
+.wcard-name{font-size:12px;font-weight:600;color:#e8e8e6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wcard-meta{font-size:10px;color:#555;margin-top:1px}
+.wcard-del{font-size:14px;color:#444;padding:2px 5px;border:none;background:none;cursor:pointer;flex-shrink:0;border-radius:5px}
+.wcard-del:hover{color:#ff6b6b;background:#3a1a1a}
+.wp-foot{padding:10px 14px;border-top:1px solid #2e2e2e}
+.wp-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:299}
+.wp-overlay.open{display:block}
+/* hold type legend */
+.legend-row{font-size:10px;color:#555;margin-top:4px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.legend-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:3px;vertical-align:middle;border:2px solid}
+</style>
+</head>
+<body>
+
+<div class="tb" id="toolbar">
+  <h1>🧗</h1>
+  <button onclick="openWallsPanel()" title="Switch wall" style="padding:3px 7px">🏔 <span id="wallNameTag">Walls</span> ▾</button>
+  <button onclick="document.getElementById('fi').click()">📷 Load</button>
+  <input type="file" id="fi" accept="image/*" style="display:none" onchange="loadPhoto(event)">
+  <div class="sep"></div>
+
+  <!-- SETUP controls -->
+  <span class="phase-pill pp-setup" id="pillSetup" style="display:none">Setup</span>
+  <span class="poly-count" id="polyCount"></span>
+  <button id="btnUndo" onclick="undoStep()" style="display:none" class="red">↩ Undo</button>
+  <button id="btnClear" onclick="clearPaint(true)" style="display:none" class="red">✕ Clear</button>
+  <button id="btnPolyClose" onclick="closePolygon()" style="display:none" class="green">Close polygon</button>
+  <div class="sep" id="sepDone" style="display:none"></div>
+  <button id="btnDoneSetup" onclick="finishSetup()" style="display:none" class="green">✓ Done (<span id="holdCountTb">0</span>)</button>
+  <button id="btnResetSetup" onclick="resetSetup()" style="display:none" class="red" title="Re-setup holds">⚙ Reset</button>
+
+  <!-- CLIMB controls -->
+  <span class="phase-pill pp-climb" id="pillClimb" style="display:none">Climbs</span>
+  <button id="btnPlace" class="on" onclick="setMode('place')" style="display:none">📍 Place</button>
+  <button id="btnView"  onclick="setMode('view')"  style="display:none">👁 View</button>
+  <span class="lbl" id="lblHoldType" style="display:none">Type:</span>
+  <button id="btnTypeHand"   onclick="setHoldType('hand')"   class="on" style="display:none">✋ Hand</button>
+  <button id="btnTypeFoot"   onclick="setHoldType('foot')"   style="display:none">🦶 Foot</button>
+  <button id="btnTypeStart"  onclick="setHoldType('start')"  style="display:none">🟢 Start</button>
+  <button id="btnTypeFinish" onclick="setHoldType('finish')" style="display:none">🔴 Finish</button>
+  <button id="btnDoneSelecting" onclick="doneSelecting()" class="green" style="display:none">✓ Done</button>
+  <div class="sep" id="sepNew" style="display:none"></div>
+  <button id="btnNew" onclick="openModal()" style="display:none">＋ New climb</button>
+
+  <div class="sep"></div>
+  <button onclick="exportData()" title="Export JSON">⬇</button>
+  <button onclick="document.getElementById('importFile').click()" title="Import JSON">⬆</button>
+  <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+  <span class="save-badge" id="saveBadge" style="display:none">Saved ✓</span>
+</div>
+
+<div class="wp-overlay" id="wpOverlay" onclick="closeWallsPanel()"></div>
+<div class="walls-panel" id="wallsPanel">
+  <div class="wp-head">
+    <h2>My Walls</h2>
+    <button onclick="closeWallsPanel()" style="padding:3px 8px;font-size:13px">✕</button>
+  </div>
+  <div class="wp-list" id="wpList"></div>
+  <div class="wp-foot">
+    <button class="green" style="width:100%;justify-content:center" onclick="newWall()">＋ Add new wall</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="canvas-area" id="ca">
+    <div class="nophoto" id="np" onclick="document.getElementById('fi').click()">
+      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#444" stroke-width="1.4">
+        <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+      </svg>
+      <span style="color:#aaa">Click to load wall photo</span>
+      <span style="font-size:11px;color:#333">Polygon-trace each hold to map your wall</span>
+    </div>
+    <div class="canvas-wrap" id="cw" style="display:none">
+      <canvas id="wallCanvas"></canvas>
+      <canvas id="paintCanvas"></canvas>
+      <canvas id="overlayCanvas"></canvas>
+      <canvas id="cursorCanvas"></canvas>
+    </div>
+  </div>
+
+  <div class="sidebar">
+    <div class="sh">
+      <span id="sideTitle">Climbs</span>
+      <span id="sideCnt" style="font-weight:400;color:#aaa;font-size:11px"></span>
+    </div>
+    <div class="clist" id="clist"><div class="empty">Load a wall photo to begin.</div></div>
+    <div class="dp" id="dp" style="display:none">
+      <div class="dr"><span>Grade</span><span class="dv" id="dg">—</span></div>
+      <div class="dr"><span>FA</span><span class="dv" id="dfa" style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">—</span></div>
+      <div class="dr"><span>Hand / Foot</span><span class="dv" id="dh">—</span></div>
+      <div class="dr"><span>Start / Finish</span><span class="dv" id="df">—</span></div>
+      <div class="dr"><span>Attempts</span><span class="dv" id="da">—</span></div>
+      <div class="dr"><span>Sends</span><span class="dv" id="ds">—</span></div>
+      <div class="dbtns">
+        <button onclick="enterEditHolds()" title="Edit holds" style="font-size:11px">✏ Holds</button>
+        <button onclick="logAttempt()">🎯</button>
+        <button onclick="logSend()" style="color:#2e7d32;border-color:#a5d6a7">✓</button>
+        <button onclick="editClimb()" title="Edit name/grade">⚙</button>
+        <button class="red" onclick="delClimb()">🗑</button>
+      </div>
+      <div class="legend-row">
+        <span><span class="legend-dot" style="background:#6ab4ff44;border-color:#6ab4ff"></span>Hand</span>
+        <span><span class="legend-dot" style="background:#f9a82544;border-color:#f9a825;border-style:dashed"></span>Foot</span>
+        <span><span class="legend-dot" style="background:#4caf5044;border-color:#4caf50"></span>Start</span>
+        <span><span class="legend-dot" style="background:#ef535044;border-color:#ef5350"></span>Finish</span>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="hint" id="hint">Load a wall photo to get started.</div>
+
+<div class="modal" id="modal">
+  <div class="mbox">
+    <h3 id="modalTitle">New climb</h3>
+    <div class="field"><label>Name</label><input id="iName" placeholder="e.g. Pinchy traverse"></div>
+    <div class="field"><label>Grade</label>
+      <select id="iGrade">
+        <option value="">— select —</option>
+        <option>VB</option><option>V0</option><option>V1</option><option>V2</option><option>V3</option>
+        <option>V4</option><option>V5</option><option>V6</option><option>V7</option><option>V8</option>
+        <option>V9</option><option>V10</option><option>V11</option><option>V12</option><option>Project</option>
+      </select>
+    </div>
+    <div class="field"><label>FA (First Ascent)</label><input id="iFA" placeholder="e.g. Louis Manley"></div>
+    <div class="mact">
+      <button onclick="closeModal()">Cancel</button>
+      <button class="green" id="modalSaveBtn" onclick="modalSave()">Create &amp; place holds</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Supabase config ──────────────────────────────────────────────────────────
+var SB_URL='https://sirsmeautvjhrrohtrhi.supabase.co';
+var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpcnNtZWF1dHZqaHJyb2h0cmhpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1MDY1NTksImV4cCI6MjA5NzA4MjU1OX0.0gXpUfPBOGE1uTNfJEJ4GHfu4UgHzaQKdMoRAELfPfo';
+
+function sbHeaders(){
+  return {'Content-Type':'application/json','apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY};
+}
+
+async function sbGet(path){
+  var r=await fetch(SB_URL+path,{headers:sbHeaders()});
+  if(!r.ok) throw new Error('GET '+path+' → '+r.status);
+  return r.json();
+}
+async function sbUpsert(table, row){
+  var r=await fetch(SB_URL+'/rest/v1/'+table+'?on_conflict=id',{
+    method:'POST',
+    headers:Object.assign({'Prefer':'resolution=merge-duplicates'},sbHeaders()),
+    body:JSON.stringify(row)
+  });
+  if(!r.ok) throw new Error('UPSERT '+table+' → '+r.status);
+}
+async function sbDelete(table, id){
+  var r=await fetch(SB_URL+'/rest/v1/'+table+'?id=eq.'+id,{
+    method:'DELETE', headers:sbHeaders()
+  });
+  if(!r.ok) throw new Error('DELETE '+table+' → '+r.status);
+}
+
+// Upload photo to Supabase Storage, return public URL
+async function uploadPhoto(wallId, dataUrl){
+  var blob=await (await fetch(dataUrl)).blob();
+  var path=wallId+'.jpg';
+  var r=await fetch(SB_URL+'/storage/v1/object/wall-photos/'+path,{
+    method:'POST',
+    headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'image/jpeg','x-upsert':'true'},
+    body:blob
+  });
+  if(!r.ok) throw new Error('Photo upload → '+r.status);
+  return SB_URL+'/storage/v1/object/public/wall-photos/'+path;
+}
+
+// ─── Multi-wall data model ────────────────────────────────────────────────────
+var walls=[];
+var activeWallId=null;
+
+var wallImg=null, wallDataUrl=null;
+var holds=[];
+var climbs=[];
+var active=null;
+var phase='empty';
+var climbMode='place';
+var glowPhase=0, animFrame=null;
+
+var painting=false;
+var polyPts=[];
+var snapshots=[];
+
+var CLIMB_COLORS=['#e53935','#1976d2','#388e3c','#f57c00','#7b1fa2','#00838f','#c62828','#283593','#558b2f','#e91e8c'];
+var PAINT_COLOR='rgba(255,200,0,0.88)';
+var PAINT_FILL='rgba(255,200,0,0.5)';
+var holdType='hand';
+
+var syncTimeout=null;
+var isSyncing=false;
+
+// ─── Restore: load from Supabase on startup ───────────────────────────────────
+(async function(){
+  setSyncStatus('connecting');
+  try{
+    var rows=await sbGet('/rest/v1/walls?select=id,name,photo_url,holds,climbs&order=updated_at.asc');
+    walls=rows.map(function(r){
+      return {id:r.id, name:r.name, photo:null, photo_url:r.photo_url, holds:r.holds||[], climbs:r.climbs||[]};
+    });
+    setSyncStatus('synced');
+    var lastId=localStorage.getItem('swm_activeWall');
+    var toLoad=walls.find(function(w){return w.id===lastId;})||walls[0];
+    if(toLoad) await loadWallById(toLoad.id, true);
+    else setSyncStatus('synced');
+    renderWallsList();
+  }catch(e){
+    setSyncStatus('offline');
+    console.warn('Supabase load failed, falling back to localStorage',e);
+    // Fallback to localStorage
+    try{
+      var raw=localStorage.getItem('swm_walls');
+      if(raw){
+        walls=JSON.parse(raw);
+        var lastId=localStorage.getItem('swm_activeWall');
+        var toLoad=walls.find(function(w){return w.id===lastId;})||walls[0];
+        if(toLoad) loadWallById(toLoad.id, true);
+      }
+    }catch(e2){ console.warn('localStorage fallback failed',e2); }
+  }
+})();
+
+// ─── Sync status indicator ────────────────────────────────────────────────────
+function setSyncStatus(s){
+  var b=document.getElementById('saveBadge');
+  var map={connecting:'⟳ Connecting…', syncing:'⟳ Saving…', synced:'✓ Synced', offline:'⚠ Offline'};
+  var col={connecting:'#888', syncing:'#c8942a', synced:'#6dbf6d', offline:'#ff6b6b'};
+  b.style.display='inline-flex';
+  b.textContent=map[s]||s;
+  b.style.color=col[s]||'#888';
+  b.style.borderColor=col[s]||'#888';
+  b.style.background='transparent';
+  if(s==='synced') setTimeout(function(){b.style.display='none';},2000);
+}
+
+// ─── Save: debounced push to Supabase ─────────────────────────────────────────
+function save(){
+  if(!activeWallId) return;
+  var w=walls.find(function(w){return w.id===activeWallId;});
+  if(!w) return;
+  w.holds=holds;
+  w.climbs=climbs;
+  // Also cache locally
+  try{ localStorage.setItem('swm_wall_'+w.id, JSON.stringify(w)); localStorage.setItem('swm_activeWall',activeWallId); }catch(e){}
+  // Debounce cloud push by 1.5s to avoid hammering on rapid taps
+  clearTimeout(syncTimeout);
+  syncTimeout=setTimeout(function(){ pushWallToCloud(w); }, 1500);
+}
+
+async function pushWallToCloud(w){
+  setSyncStatus('syncing');
+  try{
+    await sbUpsert('walls',{
+      id: w.id,
+      name: w.name,
+      photo_url: w.photo_url||null,
+      holds: w.holds,
+      climbs: w.climbs,
+      updated_at: new Date().toISOString()
+    });
+    setSyncStatus('synced');
+  }catch(e){
+    setSyncStatus('offline');
+    console.warn('Sync failed',e);
+  }
+}
+
+// ─── Wall management ──────────────────────────────────────────────────────────
+async function loadWallById(id, isRestore){
+  if(activeWallId && !isRestore) save();
+
+  var w=walls.find(function(w){return w.id===id;});
+  if(!w) return;
+
+  activeWallId=id;
+  holds=w.holds||[];
+  climbs=w.climbs||[];
+  active=null;
+  stopGlow();
+  localStorage.setItem('swm_activeWall',id);
+  document.getElementById('wallNameTag').textContent=w.name;
+
+  // Photo: use cached dataUrl or fetch from storage URL
+  if(w.photo){
+    loadWallImage(w.photo);
+  } else if(w.photo_url){
+    setSyncStatus('connecting');
+    try{
+      var resp=await fetch(w.photo_url);
+      var blob=await resp.blob();
+      var reader=new FileReader();
+      reader.onload=function(ev){
+        w.photo=ev.target.result;
+        wallDataUrl=w.photo;
+        try{ localStorage.setItem('swm_wall_'+w.id, JSON.stringify(w)); }catch(e){}
+        loadWallImage(wallDataUrl);
+        setSyncStatus('synced');
+      };
+      reader.readAsDataURL(blob);
+    }catch(e){
+      setSyncStatus('offline');
+      hint('Could not load wall photo — check connection.');
+    }
+  } else {
+    wallImg=null; wallDataUrl=null;
+    ['wallCanvas','paintCanvas','overlayCanvas','cursorCanvas'].forEach(function(cid){
+      var c=document.getElementById(cid); if(c){c.width=0;c.height=0;}
+    });
+    document.getElementById('np').style.display='flex';
+    document.getElementById('cw').style.display='none';
+    setPhase('empty');
+    hint('New wall — load a photo to start mapping holds.');
+  }
+  renderWallsList();
+}
+
+function loadWallImage(dataUrl){
+  wallDataUrl=dataUrl;
+  var img=new Image();
+  img.onload=function(){
+    wallImg=img; showCanvases(); sizeCanvases();
+    setPhase(holds.length>0?'climb':'setup');
+    drawWall(); drawOverlay();
+    hint(holds.length>0?holds.length+' holds, '+climbs.length+' climb(s).':'Photo loaded — trace holds to get started.');
+  };
+  img.src=dataUrl;
+}
+
+async function newWall(){
+  var name=prompt('Wall name:', 'Wall '+(walls.length+1));
+  if(!name) return;
+  var w={id:'wall_'+Date.now(), name:name, photo:null, photo_url:null, holds:[], climbs:[]};
+  walls.push(w);
+  setSyncStatus('syncing');
+  try{
+    await sbUpsert('walls',{id:w.id, name:w.name, holds:[], climbs:[], updated_at:new Date().toISOString()});
+    setSyncStatus('synced');
+  }catch(e){ setSyncStatus('offline'); }
+  await loadWallById(w.id, false);
+  closeWallsPanel();
+  hint('New wall "'+name+'" created. Load a photo to start mapping holds.');
+}
+
+async function renameWall(id){
+  var w=walls.find(function(w){return w.id===id;});
+  if(!w) return;
+  var name=prompt('Rename wall:', w.name);
+  if(!name||name===w.name) return;
+  w.name=name;
+  if(id===activeWallId) document.getElementById('wallNameTag').textContent=name;
+  renderWallsList();
+  try{ await sbUpsert('walls',{id:w.id, name:w.name, holds:w.holds, climbs:w.climbs, updated_at:new Date().toISOString()}); }catch(e){}
+}
+
+async function deleteWall(id){
+  var w=walls.find(function(w){return w.id===id;});
+  if(!w) return;
+  if(!confirm('Delete wall "'+w.name+'" and all its holds and climbs?')) return;
+  walls=walls.filter(function(w){return w.id!==id;});
+  try{ await sbDelete('walls',id); }catch(e){}
+  try{ localStorage.removeItem('swm_wall_'+id); }catch(e){}
+  if(id===activeWallId){
+    if(walls.length>0){ await loadWallById(walls[0].id, false); }
+    else{
+      activeWallId=null; wallImg=null; wallDataUrl=null; holds=[]; climbs=[]; active=null;
+      document.getElementById('wallNameTag').textContent='Walls';
+      document.getElementById('np').style.display='flex';
+      document.getElementById('cw').style.display='none';
+      setPhase('empty');
+      hint('All walls deleted. Add a new wall to start.');
+    }
+  }
+  renderWallsList();
+}
+
+// ─── Walls panel UI ───────────────────────────────────────────────────────────
+function openWallsPanel(){
+  renderWallsList();
+  document.getElementById('wallsPanel').classList.add('open');
+  document.getElementById('wpOverlay').classList.add('open');
+}
+function closeWallsPanel(){
+  document.getElementById('wallsPanel').classList.remove('open');
+  document.getElementById('wpOverlay').classList.remove('open');
+}
+function renderWallsList(){
+  var el=document.getElementById('wpList');
+  if(!walls.length){
+    el.innerHTML='<div class="empty">No walls yet.<br>Tap ＋ Add new wall.</div>';
+    return;
+  }
+  // Load index for counts (may be more up to date than in-memory)
+  el.innerHTML=walls.map(function(w){
+    var isActive=w.id===activeWallId;
+    var thumb=w.photo
+      ?'<img class="wcard-thumb" src="'+w.photo+'" style="width:44px;height:36px;object-fit:cover;border-radius:5px">'
+      :'<div class="wcard-thumb">🏔</div>';
+    var hc=w.holds?w.holds.length:0;
+    var cc=w.climbs?w.climbs.length:0;
+    return '<div class="wcard'+(isActive?' active':'')+'" onclick="switchWall(\''+w.id+'\')">'
+      +thumb
+      +'<div class="wcard-info">'
+        +'<div class="wcard-name">'+esc(w.name)+'</div>'
+        +'<div class="wcard-meta">'+hc+' holds · '+cc+' climbs</div>'
+      +'</div>'
+      +'<button class="wcard-del" onclick="event.stopPropagation();renameWall(\''+w.id+'\')" title="Rename">✏</button>'
+      +'<button class="wcard-del" onclick="event.stopPropagation();deleteWall(\''+w.id+'\')" title="Delete">🗑</button>'
+      +'</div>';
+  }).join('');
+}
+async function switchWall(id){
+  if(id===activeWallId){ closeWallsPanel(); return; }
+  clearPaint(false); active=null; stopGlow();
+  await loadWallById(id, false);
+  closeWallsPanel();
+}
+
+// ─── Persist ─────────────────────────────────────────────────────────────────
+function flash(id){ setSyncStatus('synced'); } // legacy alias
+
+// ─── Photo ────────────────────────────────────────────────────────────────────
+function showCanvases(){
+  document.getElementById('np').style.display='none';
+  document.getElementById('cw').style.display='inline-block';
+}
+function loadPhoto(e){
+  var f=e.target.files[0]; if(!f) return;
+  if(!activeWallId){
+    var name=prompt('Name this wall:', 'My Wall')||'My Wall';
+    var w={id:'wall_'+Date.now(), name:name, photo:null, photo_url:null, holds:[], climbs:[]};
+    walls.push(w); activeWallId=w.id;
+    document.getElementById('wallNameTag').textContent=name;
+  }
+  var reader=new FileReader();
+  reader.onload=async function(ev){
+    wallDataUrl=ev.target.result;
+    var w=walls.find(function(w){return w.id===activeWallId;});
+    if(w) w.photo=wallDataUrl;
+    var img=new Image();
+    img.onload=function(){
+      wallImg=img; holds=[]; climbs=[]; active=null;
+      showCanvases(); sizeCanvases(); setPhase('setup');
+      clearPaint(false); drawWall(); drawOverlay();
+      hint('Photo loaded — trace holds with the polygon tool.');
+    };
+    img.src=wallDataUrl;
+    // Upload to Supabase Storage in background
+    setSyncStatus('syncing');
+    try{
+      var url=await uploadPhoto(activeWallId, wallDataUrl);
+      if(w){ w.photo_url=url; }
+      await sbUpsert('walls',{id:activeWallId, name:w?w.name:'Wall', photo_url:url, holds:[], climbs:[], updated_at:new Date().toISOString()});
+      setSyncStatus('synced');
+    }catch(err){
+      setSyncStatus('offline');
+      console.warn('Photo upload failed',err);
+    }
+  };
+  reader.readAsDataURL(f);
+}
+function sizeCanvases(){
+  var area=document.getElementById('ca');
+  var mw=area.clientWidth-4, mh=area.clientHeight-4;
+  var r=Math.min(mw/wallImg.width, mh/wallImg.height, 1);
+  var w=Math.round(wallImg.width*r), h=Math.round(wallImg.height*r);
+  ['wallCanvas','paintCanvas','overlayCanvas','cursorCanvas'].forEach(function(id){
+    var c=document.getElementById(id); c.width=w; c.height=h; c._r=r;
+  });
+  drawWall();
+}
+function drawWall(){
+  var wc=document.getElementById('wallCanvas');
+  if(!wc.width||!wallImg) return;
+  var ctx=wc.getContext('2d'), r=wc._r||1;
+  ctx.clearRect(0,0,wc.width,wc.height);
+
+  if(phase==='climb'&&active){
+    // 1. Draw the full-colour wall on an offscreen canvas
+    var full=document.createElement('canvas');
+    full.width=wc.width; full.height=wc.height;
+    full.getContext('2d').drawImage(wallImg,0,0,wc.width,wc.height);
+
+    // 2. Draw the dimmed wall as base
+    ctx.filter='grayscale(65%) brightness(0.38)';
+    ctx.drawImage(wallImg,0,0,wc.width,wc.height);
+    ctx.filter='none';
+
+    // 3. Get active hold polygons
+    var acl=climbs.find(function(c){return c.id===active;});
+    if(acl&&acl.holds.length){
+      // Create a mask canvas: black everywhere, white inside hold shapes
+      var mask=document.createElement('canvas');
+      mask.width=wc.width; mask.height=wc.height;
+      var mctx=mask.getContext('2d');
+      mctx.fillStyle='#000';
+      mctx.fillRect(0,0,mask.width,mask.height);
+      mctx.fillStyle='#fff';
+      acl.holds.forEach(function(entry){
+        var hid=typeof entry==='object'?entry.id:entry;
+        var h=holds.find(function(h){return h.id===hid;});
+        if(!h||!h.pts||h.pts.length<3) return;
+        mctx.beginPath();
+        h.pts.forEach(function(p,i){ i===0?mctx.moveTo(p[0]*r,p[1]*r):mctx.lineTo(p[0]*r,p[1]*r); });
+        mctx.closePath();
+        mctx.fill();
+      });
+
+      // 4. Use the mask to cut full-colour pixels onto the dimmed base
+      // Draw full image clipped to hold shapes
+      ctx.save();
+      ctx.globalCompositeOperation='source-over';
+      // Clip to the combined hold region
+      ctx.beginPath();
+      acl.holds.forEach(function(entry){
+        var hid=typeof entry==='object'?entry.id:entry;
+        var h=holds.find(function(h){return h.id===hid;});
+        if(!h||!h.pts||h.pts.length<3) return;
+        h.pts.forEach(function(p,i){ i===0?ctx.moveTo(p[0]*r,p[1]*r):ctx.lineTo(p[0]*r,p[1]*r); });
+        ctx.closePath();
+      });
+      ctx.clip();
+      ctx.drawImage(full,0,0);
+      ctx.restore();
+    }
+  } else {
+    ctx.drawImage(wallImg,0,0,wc.width,wc.height);
+  }
+}
+
+// ─── Paint canvas helpers ─────────────────────────────────────────────────────
+function getPaintCtx(){ return document.getElementById('paintCanvas').getContext('2d'); }
+function getPaintCanvas(){ return document.getElementById('paintCanvas'); }
+
+function snapshot(){
+  var pc=getPaintCanvas();
+  snapshots.push(pc.getContext('2d').getImageData(0,0,pc.width,pc.height));
+  if(snapshots.length>40) snapshots.shift();
+}
+
+function undoStep(){
+  var pc=getPaintCanvas(), ctx=pc.getContext('2d');
+  snapshots.pop();
+  ctx.clearRect(0,0,pc.width,pc.height);
+  if(snapshots.length>0) ctx.putImageData(snapshots[snapshots.length-1],0,0);
+  polyPts=[]; updatePolyUI();
+}
+
+function clearPaint(interactive){
+  var pc=getPaintCanvas();
+  pc.getContext('2d').clearRect(0,0,pc.width,pc.height);
+  snapshots=[];
+  polyPts=[];
+  updatePolyUI();
+  if(interactive) hint('Canvas cleared. Click to place polygon vertices.');
+}
+
+function ptFrom(e, canvas){
+  var rect=canvas.getBoundingClientRect();
+  var src=e.touches?e.touches[0]:e;
+  return {x:src.clientX-rect.left, y:src.clientY-rect.top};
+}
+
+// ─── POLYGON tool ─────────────────────────────────────────────────────────────
+function polyClick(pt){
+  polyPts.push(pt);
+  if(polyPts.length>1){
+    snapshot();
+    var ctx=getPaintCtx();
+    ctx.globalCompositeOperation='source-over';
+    var prev=polyPts[polyPts.length-2];
+    ctx.beginPath(); ctx.moveTo(prev.x,prev.y); ctx.lineTo(pt.x,pt.y);
+    ctx.strokeStyle=PAINT_COLOR; ctx.lineWidth=2; ctx.lineCap='round'; ctx.stroke();
+  }
+  updatePolyUI();
+  hint('Point '+polyPts.length+' — keep clicking to add vertices. Double-click or Close to finish.');
+}
+
+function closePolygon(){
+  if(polyPts.length<3){ hint('Need at least 3 points to close a polygon.'); return; }
+  snapshot();
+  var ctx=getPaintCtx();
+  ctx.globalCompositeOperation='source-over';
+  ctx.beginPath();
+  polyPts.forEach(function(p,i){ i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y); });
+  ctx.closePath();
+  ctx.fillStyle=PAINT_FILL; ctx.fill();
+  ctx.strokeStyle=PAINT_COLOR; ctx.lineWidth=2; ctx.stroke();
+  polyPts=[];
+  updatePolyUI();
+  var cc=document.getElementById('cursorCanvas');
+  cc.getContext('2d').clearRect(0,0,cc.width,cc.height);
+  saveCurrentPaint();
+}
+
+function updatePolyUI(){
+  var pc=document.getElementById('polyCount');
+  var cb=document.getElementById('btnPolyClose');
+  var haspts=polyPts.length>0;
+  pc.style.display=haspts?'inline-flex':'none';
+  if(haspts) pc.textContent=polyPts.length+' pts';
+  if(cb) cb.style.display=haspts?'':'none';
+}
+
+// ─── Cursor preview ───────────────────────────────────────────────────────────
+function drawPolyCursor(pt){
+  var cc=document.getElementById('cursorCanvas');
+  var ctx=cc.getContext('2d');
+  ctx.clearRect(0,0,cc.width,cc.height);
+  if(polyPts.length===0) return;
+  var last=polyPts[polyPts.length-1];
+  ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(pt.x,pt.y);
+  ctx.strokeStyle='rgba(255,200,0,0.5)'; ctx.lineWidth=1; ctx.setLineDash([4,4]); ctx.stroke();
+  ctx.setLineDash([]);
+  if(polyPts.length>=2){
+    ctx.beginPath(); ctx.moveTo(pt.x,pt.y); ctx.lineTo(polyPts[0].x,polyPts[0].y);
+    ctx.strokeStyle='rgba(255,200,0,0.25)'; ctx.lineWidth=1; ctx.setLineDash([2,6]); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  polyPts.forEach(function(p,i){
+    ctx.beginPath(); ctx.arc(p.x,p.y,3,0,Math.PI*2);
+    ctx.fillStyle=i===0?'rgba(255,255,100,0.9)':'rgba(255,200,0,0.7)'; ctx.fill();
+  });
+}
+
+// ─── Canvas event routing (polygon only) ──────────────────────────────────────
+function handlePaintDown(e){ if(phase!=='setup') return; e.preventDefault(); }
+function handlePaintMove(e){
+  if(phase!=='setup') return;
+  e.preventDefault();
+  drawPolyCursor(ptFrom(e, getPaintCanvas()));
+}
+function handlePaintUp(e){ painting=false; }
+function handlePaintLeave(e){
+  painting=false;
+  var cc=document.getElementById('cursorCanvas');
+  cc.getContext('2d').clearRect(0,0,cc.width,cc.height);
+}
+function handlePaintClick(e){
+  if(phase!=='setup') return;
+  polyClick(ptFrom(e, getPaintCanvas()));
+}
+function handlePaintDblClick(e){
+  if(phase!=='setup') return;
+  e.preventDefault();
+  closePolygon();
+}
+
+(function(){
+  var pc=document.getElementById('paintCanvas');
+  pc.addEventListener('mousedown', handlePaintDown);
+  pc.addEventListener('mousemove', handlePaintMove);
+  pc.addEventListener('mouseup',   handlePaintUp);
+  pc.addEventListener('mouseleave',handlePaintLeave);
+  pc.addEventListener('click',     handlePaintClick);
+  pc.addEventListener('dblclick',  handlePaintDblClick);
+  pc.addEventListener('touchstart',handlePaintDown,{passive:false});
+  pc.addEventListener('touchmove', handlePaintMove,{passive:false});
+  pc.addEventListener('touchend',  handlePaintUp);
+})();
+
+// ─── Save hold from paint ─────────────────────────────────────────────────────
+function saveCurrentPaint(){
+  var pc=getPaintCanvas();
+  var ctx=pc.getContext('2d');
+  var r=pc._r||1;
+  var imgd=ctx.getImageData(0,0,pc.width,pc.height);
+  var d=imgd.data, w=pc.width, h=pc.height;
+
+  var painted=[];
+  for(var y=0;y<h;y++) for(var x=0;x<w;x++){
+    if(d[(y*w+x)*4+3]>32) painted.push([x,y]);
+  }
+  if(painted.length<6){ hint('Draw more of the hold first.'); return; }
+
+  // Centroid
+  var sx=0,sy=0; painted.forEach(function(p){sx+=p[0];sy+=p[1];});
+  var cx=Math.round(sx/painted.length), cy=Math.round(sy/painted.length);
+
+  // Boundary → sorted outline → subsample ≤60 pts
+  var mask=new Uint8Array(w*h);
+  painted.forEach(function(p){mask[p[1]*w+p[0]]=1;});
+  var boundary=[];
+  painted.forEach(function(p){
+    var x=p[0],y=p[1];
+    if(!mask[(y-1)*w+x]||!mask[(y+1)*w+x]||!mask[y*w+x-1]||!mask[y*w+x+1]) boundary.push([x,y]);
+  });
+  boundary.sort(function(a,b){ return Math.atan2(a[1]-cy,a[0]-cx)-Math.atan2(b[1]-cy,b[0]-cx); });
+  var step=Math.max(1,Math.floor(boundary.length/60));
+  var pts=[];
+  for(var i=0;i<boundary.length;i+=step) pts.push(boundary[i]);
+
+  // Original image coords
+  var origPts=pts.map(function(p){return [Math.round(p[0]/r),Math.round(p[1]/r)];});
+  holds.push({id:Date.now(), cx:Math.round(cx/r), cy:Math.round(cy/r), pts:origPts});
+
+  clearPaint(false);
+  drawOverlay();
+  updateSideCnt();
+  save();
+  document.getElementById('holdCountTb').textContent=holds.length;
+  hint('Hold '+holds.length+' saved ✓  Paint the next hold, or ✓ Done when finished.');
+}
+
+// ─── Setup-phase overlay click (remove hold) ──────────────────────────────────
+document.getElementById('overlayCanvas').addEventListener('click',function(e){
+  if(phase!=='setup') return;
+  var r=this._r||1;
+  var rect=this.getBoundingClientRect();
+  var mx=(e.clientX-rect.left)/r, my=(e.clientY-rect.top)/r;
+  var best=null, bd=Infinity;
+  holds.forEach(function(h){
+    var d=Math.hypot(mx-h.cx,my-h.cy);
+    if(d<bd&&d<50){bd=d;best=h;}
+  });
+  if(best){
+    holds=holds.filter(function(h){return h.id!==best.id;});
+    document.getElementById('holdCountTb').textContent=holds.length;
+    drawOverlay(); updateSideCnt(); save();
+    hint(holds.length+' holds. Keep tracing, or ✓ Done when finished.');
+  }
+});
+
+// ─── Climb mode canvas click ──────────────────────────────────────────────────
+document.getElementById('overlayCanvas').addEventListener('click',function(e){
+  if(phase!=='climb') return;
+  if(climbMode!=='place') return;
+  if(!active){ hint('Select or create a climb first.'); return; }
+  var r=this._r||1;
+  var rect=this.getBoundingClientRect();
+  var mx=(e.clientX-rect.left)/r, my=(e.clientY-rect.top)/r;
+  var cl=climbs.find(function(c){return c.id===active;}); if(!cl) return;
+  var best=null, bd=Infinity;
+  holds.forEach(function(h){
+    var d=Math.hypot(mx-h.cx,my-h.cy);
+    var tol=estimateRadius(h)+16;
+    if(d<tol&&d<bd){bd=d;best=h;}
+  });
+  if(!best){ hint('Tap directly on a hold.'); return; }
+  // holds array now stores {id, type} objects
+  var existIdx=cl.holds.findIndex(function(e){return e.id===best.id;});
+  if(existIdx>=0){
+    cl.holds.splice(existIdx,1); // remove on second tap
+  } else {
+    cl.holds.push({id:best.id, type:holdType});
+  }
+  drawWall(); drawOverlay(); updateDetail(); renderList(); save();
+});
+
+// ─── Draw ─────────────────────────────────────────────────────────────────────
+// Hold type palette (colourblind-safe: shape + colour + dash pattern)
+//   hand:   solid blue   #6ab4ff
+//   foot:   dashed amber #f9a825
+//   start:  solid green  #4caf50
+//   finish: solid red    #ef5350
+var TYPE_COL={hand:'#6ab4ff', foot:'#f9a825', start:'#4caf50', finish:'#ef5350'};
+function typeCol(t){ return TYPE_COL[t]||TYPE_COL.hand; }
+
+function drawOverlay(){
+  var oc=document.getElementById('overlayCanvas');
+  if(!oc.width) return;
+  var ctx=oc.getContext('2d'), r=oc._r||1;
+  ctx.clearRect(0,0,oc.width,oc.height);
+  if(!holds.length) return;
+
+  var pulse=glowPhase;
+
+  // Build lookup: holdId → {climbIdx, type}
+  var holdMeta={};
+  climbs.forEach(function(cl,ci){
+    cl.holds.forEach(function(entry){
+      var hid=typeof entry==='object'?entry.id:entry;
+      var htype=typeof entry==='object'?entry.type:'hand';
+      holdMeta[hid]={ci:ci, type:htype};
+    });
+  });
+
+  // Active hold set with types
+  var activeSet={}; // holdId → type
+  if(active){
+    var acl=climbs.find(function(c){return c.id===active;});
+    if(acl) acl.holds.forEach(function(entry){
+      var hid=typeof entry==='object'?entry.id:entry;
+      var htype=typeof entry==='object'?entry.type:'hand';
+      activeSet[hid]=htype;
+    });
+  }
+
+  holds.forEach(function(h){
+    if(!h.pts||h.pts.length<3) return;
+    var isAct=activeSet.hasOwnProperty(h.id);
+    var meta=holdMeta[h.id];
+    var isAssigned=meta&&!isAct;
+
+    function mkPath(){
+      ctx.beginPath();
+      h.pts.forEach(function(p,i){ i===0?ctx.moveTo(p[0]*r,p[1]*r):ctx.lineTo(p[0]*r,p[1]*r); });
+      ctx.closePath();
+    }
+
+    if(phase==='setup'){
+      mkPath(); ctx.fillStyle='rgba(255,210,0,0.18)'; ctx.fill();
+      mkPath(); ctx.strokeStyle='rgba(255,210,0,0.9)'; ctx.lineWidth=1.5; ctx.stroke();
+      ctx.beginPath(); ctx.arc(h.cx*r,h.cy*r,3,0,Math.PI*2);
+      ctx.fillStyle='rgba(255,210,0,0.9)'; ctx.fill();
+
+    } else if(isAct){
+      var htype=activeSet[h.id];
+      var col=typeCol(htype);
+      var isDash=htype==='foot';
+      // Pulsing outer glow
+      [[1.42+pulse*0.2,'22',8],[1.22+pulse*0.1,'55',4],[1.06,'bb',2]].forEach(function(cfg){
+        ctx.save();
+        ctx.translate(h.cx*r,h.cy*r); ctx.scale(cfg[0],cfg[0]); ctx.translate(-h.cx*r,-h.cy*r);
+        mkPath(); ctx.strokeStyle=col+cfg[1]; ctx.lineWidth=cfg[2]; ctx.stroke();
+        ctx.restore();
+      });
+      mkPath(); ctx.fillStyle=col+'28'; ctx.fill();
+      ctx.setLineDash(isDash?[6,4]:[]);
+      mkPath(); ctx.strokeStyle='rgba(255,255,255,0.9)'; ctx.lineWidth=2.5; ctx.stroke();
+      mkPath(); ctx.strokeStyle=col; ctx.lineWidth=1.5; ctx.stroke();
+      ctx.setLineDash([]);
+      // Start/finish label badge
+      if(htype==='start'||htype==='finish'){
+        var lbl=htype==='start'?'S':'F';
+        ctx.font='bold 10px -apple-system,sans-serif';
+        ctx.fillStyle=col; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText(lbl, h.cx*r, h.cy*r);
+        ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+      }
+
+    } else if(isAssigned){
+      var htype2=meta.type;
+      var col2=typeCol(htype2);
+      var isDash2=htype2==='foot';
+      mkPath(); ctx.fillStyle=col2+'18'; ctx.fill();
+      ctx.setLineDash(isDash2?[5,4]:[]);
+      mkPath(); ctx.strokeStyle=col2+'cc'; ctx.lineWidth=2; ctx.stroke();
+      ctx.setLineDash([]);
+      if(htype2==='start'||htype2==='finish'){
+        ctx.font='bold 9px -apple-system,sans-serif';
+        ctx.fillStyle=col2+'cc'; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText(htype2==='start'?'S':'F', h.cx*r, h.cy*r);
+        ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+      }
+
+    } else if(phase==='climb'&&active){
+      mkPath(); ctx.strokeStyle='rgba(255,255,255,0.13)'; ctx.lineWidth=1; ctx.stroke();
+
+    } else {
+      mkPath(); ctx.fillStyle='rgba(255,255,255,0.05)'; ctx.fill();
+      mkPath(); ctx.strokeStyle='rgba(255,255,255,0.35)'; ctx.lineWidth=1.5; ctx.stroke();
+    }
+  });
+
+  // Active climb label
+  if(active&&phase==='climb'){
+    var acl=climbs.find(function(c){return c.id===active;});
+    if(acl&&acl.holds.length){
+      var firstId=typeof acl.holds[0]==='object'?acl.holds[0].id:acl.holds[0];
+      var fh=holds.find(function(h){return h.id===firstId;});
+      if(fh){
+        var rad=estimateRadius(fh);
+        var lx=fh.cx*r, ly=fh.cy*r-(rad+8)*r;
+        if(ly<18) ly=fh.cy*r+(rad+10)*r+16;
+        var txt=acl.name+' ('+acl.grade+')';
+        ctx.font='bold 12px -apple-system,sans-serif';
+        var tw=ctx.measureText(txt).width;
+        lx=Math.max(tw/2+8,Math.min(oc.width-tw/2-8,lx));
+        ctx.fillStyle='rgba(0,0,0,0.78)';
+        ctx.beginPath(); ctx.roundRect(lx-tw/2-6,ly-13,tw+12,18,5); ctx.fill();
+        ctx.fillStyle='#fff'; ctx.fillText(txt,lx-tw/2,ly);
+      }
+    }
+  }
+}
+
+function estimateRadius(h){
+  if(!h.pts||!h.pts.length) return 20;
+  var r=0; h.pts.forEach(function(p){r=Math.max(r,Math.hypot(p[0]-h.cx,p[1]-h.cy));}); return r;
+}
+
+// ─── Glow animation ───────────────────────────────────────────────────────────
+function startGlow(){
+  if(animFrame) return;
+  var t=0;
+  (function step(){ t+=0.035; glowPhase=(Math.sin(t)+1)/2; drawWall(); drawOverlay(); animFrame=requestAnimationFrame(step); })();
+}
+function stopGlow(){ if(animFrame){cancelAnimationFrame(animFrame);animFrame=null;} glowPhase=0; }
+
+// ─── Phase & toolbar visibility ───────────────────────────────────────────────
+function setPhase(p){
+  phase=p;
+  var s=p==='setup', c=p==='climb';
+  var setupIds=['pillSetup','btnUndo','btnClear','btnPolyClose','sepDone','btnDoneSetup','btnResetSetup'];
+  var climbIds=['pillClimb','btnPlace','btnView','sepNew','btnNew'];
+  setupIds.forEach(function(id){sh(id,s);});
+  climbIds.forEach(function(id){sh(id,c);});
+  sh('btnDoneSelecting',false);
+  sh('lblHoldType',false);
+  sh('btnTypeHand',false);
+  sh('btnTypeFoot',false);
+  sh('btnPolyClose',false); // shown only when poly active
+  sh('polyCount',false);
+  document.getElementById('paintCanvas').style.pointerEvents=s?'auto':'none';
+  document.getElementById('paintCanvas').style.cursor=s?'crosshair':'default';
+  document.getElementById('overlayCanvas').style.pointerEvents=c?'auto':'none';
+  document.getElementById('overlayCanvas').style.cursor=c?'crosshair':'default';
+  document.getElementById('sideTitle').textContent=s?'Holds':'Climbs';
+  document.getElementById('holdCountTb').textContent=holds.length;
+  if(s){
+    document.getElementById('clist').innerHTML='<div class="empty">Click to place polygon vertices.<br>Double-click to close &amp; save each hold.<br><br>Click a saved outline to delete it.</div>';
+    document.getElementById('dp').style.display='none';
+    polyPts=[];
+  } else {
+    renderList();
+  }
+  updateSideCnt();
+}
+function sh(id,v){ var el=document.getElementById(id); if(el) el.style.display=v?'':'none'; }
+function updateSideCnt(){
+  document.getElementById('sideCnt').textContent=phase==='setup'?'('+holds.length+' holds)':'('+climbs.length+')';
+}
+
+// ─── Setup actions ────────────────────────────────────────────────────────────
+function finishSetup(){
+  if(!holds.length){ hint('Trace and save at least one hold first.'); return; }
+  save(); setPhase('climb'); drawWall(); drawOverlay();
+  hint(holds.length+' holds confirmed. Create a climb and tap holds to build routes.');
+}
+function resetSetup(){
+  if(!confirm('Clear all climbs and re-trace holds for this wall?')) return;
+  climbs=[]; active=null; holds=[]; stopGlow(); clearPaint(false);
+  setPhase('setup'); drawWall(); drawOverlay(); save();
+}
+
+// ─── Climb mode ───────────────────────────────────────────────────────────────
+function setMode(m){
+  climbMode=m;
+  var placing=m==='place'&&!!active;
+  document.getElementById('btnPlace').classList.toggle('on',m==='place');
+  document.getElementById('btnView').classList.toggle('on',m==='view');
+  document.getElementById('overlayCanvas').style.cursor=m==='place'?'crosshair':'default';
+  sh('btnDoneSelecting', placing);
+  sh('lblHoldType', placing);
+  sh('btnTypeHand',   placing);
+  sh('btnTypeFoot',   placing);
+  sh('btnTypeStart',  placing);
+  sh('btnTypeFinish', placing);
+  hint(m==='place'?(active?'Tap holds to assign. Choose type: Hand · Foot · Start · Finish.':'Select or create a climb first.'):'Select a climb to highlight its holds.');
+}
+
+function setHoldType(t){
+  holdType=t;
+  ['btnTypeHand','btnTypeFoot','btnTypeStart','btnTypeFinish'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.classList.remove('on');
+  });
+  var map={hand:'btnTypeHand',foot:'btnTypeFoot',start:'btnTypeStart',finish:'btnTypeFinish'};
+  var el=document.getElementById(map[t]); if(el) el.classList.add('on');
+  var labels={hand:'✋ hand',foot:'🦶 foot',start:'🟢 start',finish:'🔴 finish'};
+  hint('Now placing: '+labels[t]+' holds. Tap holds on the wall.');
+}
+
+function enterEditHolds(){
+  if(!active) return;
+  setMode('place');
+  hint('Edit mode — tap holds to add/remove. Change type with Hand/Foot. ✓ Done when finished.');
+}
+
+function doneSelecting(){
+  active=null; stopGlow(); setMode('view');
+  sh('btnDoneSelecting',false); sh('lblHoldType',false);
+  sh('btnTypeHand',false); sh('btnTypeFoot',false);
+  sh('btnTypeStart',false); sh('btnTypeFinish',false);
+  renderList(); updateDetail(); drawWall(); drawOverlay();
+  hint('Climb saved. Select another climb or create a new one.');
+}
+
+// ─── Modal — shared for create & edit ────────────────────────────────────────
+var modalMode='create'; // 'create' | 'edit'
+
+function openModal(){
+  modalMode='create';
+  document.getElementById('modalTitle').textContent='New climb';
+  document.getElementById('modalSaveBtn').textContent='Create & place holds';
+  document.getElementById('iName').value='';
+  document.getElementById('iGrade').value='';
+  document.getElementById('iFA').value='';
+  document.getElementById('modal').classList.add('open');
+  setTimeout(function(){document.getElementById('iName').focus();},50);
+}
+
+function editClimb(){
+  if(!active) return;
+  var cl=climbs.find(function(c){return c.id===active;});
+  if(!cl) return;
+  modalMode='edit';
+  document.getElementById('modalTitle').textContent='Edit climb';
+  document.getElementById('modalSaveBtn').textContent='Save changes';
+  document.getElementById('iName').value=cl.name;
+  document.getElementById('iGrade').value=cl.grade;
+  document.getElementById('iFA').value=cl.fa||'';
+  document.getElementById('modal').classList.add('open');
+  setTimeout(function(){document.getElementById('iName').focus();},50);
+}
+
+function closeModal(){ document.getElementById('modal').classList.remove('open'); }
+document.getElementById('modal').addEventListener('click',function(e){if(e.target===this)closeModal();});
+
+function modalSave(){
+  if(modalMode==='edit') updateClimb();
+  else saveClimb();
+}
+
+function saveClimb(){
+  var name=document.getElementById('iName').value.trim()||'Unnamed climb';
+  var grade=document.getElementById('iGrade').value||'?';
+  var fa=document.getElementById('iFA').value.trim();
+  var id=Date.now().toString();
+  climbs.push({id:id,name:name,grade:grade,fa:fa,holds:[],attempts:0,sends:0,created:new Date().toISOString()});
+  closeModal(); active=id; setMode('place');
+  renderList(); updateDetail(); save(); startGlow();
+  hint('Tap holds on the wall to build "'+name+'". ✓ Done selecting when finished.');
+}
+
+function updateClimb(){
+  var cl=climbs.find(function(c){return c.id===active;});
+  if(!cl) return;
+  cl.name=document.getElementById('iName').value.trim()||cl.name;
+  cl.grade=document.getElementById('iGrade').value||cl.grade;
+  cl.fa=document.getElementById('iFA').value.trim();
+  closeModal(); renderList(); updateDetail(); save();
+  hint('"'+cl.name+'" updated.');
+}
+
+// ─── Sidebar ──────────────────────────────────────────────────────────────────
+function renderList(){
+  updateSideCnt();
+  var el=document.getElementById('clist');
+  if(!climbs.length){ el.innerHTML='<div class="empty">No climbs yet.<br>Tap ＋ New climb.</div>'; return; }
+  el.innerHTML=climbs.map(function(cl){
+    var sent=cl.sends>0;
+    var sp=sent?'<span class="cpill cps">Sent '+cl.sends+'×</span>':'<span class="cpill cpp">Project</span>';
+    return '<div class="ccard'+(cl.id===active?' sel':'')+'" onclick="selClimb(\''+cl.id+'\')">'
+      +'<div class="cn">'+esc(cl.name)+'</div>'
+      +'<div class="cm"><span class="cpill cpg">'+cl.grade+'</span>'+sp+'<span>'+cl.holds.length+' holds</span>'+(cl.fa?'<span style="color:#555">FA: '+esc(cl.fa)+'</span>':'')+(cl.attempts?'<span>'+cl.attempts+' att.</span>':'')+'</div>'
+      +'</div>';
+  }).join('');
+}
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function selClimb(id){
+  active=id; renderList(); updateDetail();
+  drawWall(); drawOverlay();
+  if(active){ startGlow(); setMode(climbMode); } else { stopGlow(); sh('btnDoneSelecting',false); drawOverlay(); }
+  hint(active?'Tap holds to add/remove. ✓ Done selecting when finished.':'');
+}
+function updateDetail(){
+  var cl=climbs.find(function(c){return c.id===active;});
+  var dp=document.getElementById('dp');
+  if(!cl){ dp.style.display='none'; return; }
+  dp.style.display='flex';
+  function count(t){ return cl.holds.filter(function(e){return (e.type||'hand')===t;}).length; }
+  document.getElementById('dg').textContent=cl.grade;
+  document.getElementById('dfa').textContent=cl.fa||'—';
+  document.getElementById('dh').textContent=count('hand')+' hand / '+count('foot')+' foot';
+  document.getElementById('df').textContent=count('start')+' start / '+count('finish')+' finish';
+  document.getElementById('da').textContent=cl.attempts;
+  document.getElementById('ds').textContent=cl.sends;
+}
+function logAttempt(){ var cl=climbs.find(function(c){return c.id===active;}); if(!cl)return; cl.attempts++; updateDetail(); renderList(); save(); hint('Attempt logged — total: '+cl.attempts); }
+function logSend(){ var cl=climbs.find(function(c){return c.id===active;}); if(!cl)return; cl.sends++; cl.attempts=Math.max(cl.attempts,cl.sends); updateDetail(); renderList(); save(); hint('🎉 Send! Total: '+cl.sends); }
+function delClimb(){
+  if(!active)return;
+  var cl=climbs.find(function(c){return c.id===active;});
+  if(!confirm('Delete "'+cl.name+'"?'))return;
+  climbs=climbs.filter(function(c){return c.id!==active;});
+  active=climbs.length?climbs[climbs.length-1].id:null;
+  renderList(); updateDetail(); stopGlow(); drawWall(); drawOverlay(); save();
+}
+
+// ─── Export / Import ──────────────────────────────────────────────────────────
+function exportData(){
+  save();
+  var w=walls.find(function(w){return w.id===activeWallId;});
+  var data=w?{wall:w, exported:new Date().toISOString()}:{climbs:climbs,holds:holds,exported:new Date().toISOString()};
+  var name=(w?w.name.replace(/\s+/g,'_'):'spraywall')+'_'+new Date().toISOString().slice(0,10)+'.json';
+  var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=name; a.click();
+}
+function importData(e){
+  var f=e.target.files[0]; if(!f)return;
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    try{
+      var d=JSON.parse(ev.target.result);
+      if(d.wall){
+        // Import a full wall
+        var w=d.wall;
+        w.id='wall_'+Date.now(); // new id to avoid collision
+        walls.push(w);
+        saveAllWalls();
+        loadWallById(w.id,false);
+        hint('Imported wall "'+w.name+'" with '+w.holds.length+' holds, '+w.climbs.length+' climbs.');
+      } else {
+        // Legacy import — merge into current wall
+        if(d.climbs) climbs=d.climbs;
+        if(d.holds) holds=d.holds;
+        active=null;
+        setPhase(holds.length>0?'climb':'setup');
+        renderList(); updateDetail(); drawWall(); drawOverlay(); save();
+        hint('Imported '+climbs.length+' climb(s), '+holds.length+' holds into current wall.');
+      }
+    }catch(e){ hint('Could not read file.'); }
+  };
+  reader.readAsText(f);
+}
+
+function hint(t){ document.getElementById('hint').textContent=t; }
+window.addEventListener('resize',function(){ if(wallImg){ sizeCanvases(); drawOverlay(); } });
+</script>
+<script>
+if("serviceWorker" in navigator){
+  window.addEventListener("load", function(){
+    navigator.serviceWorker.register("/sw.js").then(function(r){
+      console.log("SW registered", r.scope);
+    }).catch(function(e){ console.log("SW failed", e); });
+  });
+}
+</script>
+</body>
+</html>
