@@ -343,6 +343,7 @@ html.mobile .fab:active{transform:scale(0.93)}
   <button id="d-btnTypeStart"  onclick="setHoldType('start')"  style="display:none">🟢 Start</button>
   <button id="d-btnTypeFinish" onclick="setHoldType('finish')" style="display:none">🔴 Finish</button>
   <button id="d-btnDoneSelecting" onclick="doneSelecting()" class="green" style="display:none">✓ Done</button>
+  <button id="d-btnAddHolds" onclick="goMapHolds()" style="display:none" title="Add more holds to this wall">⬡ Add holds</button>
   <div class="sep" id="d-sepNew" style="display:none"></div>
   <button id="d-btnNew" onclick="openModal()" style="display:none">＋ New climb</button>
 
@@ -488,7 +489,7 @@ html.mobile .fab:active{transform:scale(0.93)}
       <h3>Hold mapping</h3>
       <div class="setup-row" onclick="goMapHolds()">
         <div class="setup-row-left">
-          <div class="setup-row-title">Map holds</div>
+          <div class="setup-row-title" id="mapHoldsTitle">Map holds</div>
           <div class="setup-row-sub" id="holdStatus">No holds mapped yet</div>
         </div>
         <div class="setup-row-right">›</div>
@@ -928,6 +929,10 @@ function loadPhoto(e){
     walls.push(w); activeWallId=w.id;
     ['wallNameTag','wallNameTag2'].forEach(function(tid){ var e=document.getElementById(tid); if(e) e.textContent=name; });
   }
+  // On mobile, the file picker can be triggered from the Setup tab —
+  // make sure we're on the Wall tab BEFORE sizing the canvas, otherwise
+  // #ca-mobile is display:none and offsetWidth/Height read as 0.
+  if(IS_MOBILE && currentTab!=='wall'){ switchTab('wall'); }
   var reader=new FileReader();
   reader.onload=async function(ev){
     wallDataUrl=ev.target.result;
@@ -936,8 +941,15 @@ function loadPhoto(e){
     var img=new Image();
     img.onload=function(){
       wallImg=img; holds=[]; climbs=[]; active=null;
-      showCanvases(); sizeCanvases(); setPhase('setup');
-      clearPaint(false); drawWall(); drawOverlay();
+      showCanvases();
+      setPhase('setup');
+      clearPaint(false);
+      // Give the now-visible tab a frame to lay out before measuring it
+      requestAnimationFrame(function(){
+        sizeCanvases();
+        drawWall();
+        drawOverlay();
+      });
       hint('Photo loaded — trace holds with the polygon tool.');
     };
     img.src=wallDataUrl;
@@ -1530,17 +1542,24 @@ function switchTab(name){
 
 function goMapHolds(){
   if(!wallImg){ hint('Load a photo first.'); switchTab('wall'); return; }
+  // Re-enter setup mode WITHOUT clearing existing holds/climbs —
+  // this lets you add more holds to a wall you've already started mapping.
   switchTab('wall');
   setPhase('setup');
+  if(holds.length>0){
+    hint(holds.length+' holds already mapped. Trace more, or tap ✓ Done when finished.');
+  }
 }
 
 function updateSetupTab(){
   var photoEl=document.getElementById('photoStatus');
   var holdEl=document.getElementById('holdStatus');
   var resetRow=document.getElementById('setupResetRow');
+  var titleEl=document.getElementById('mapHoldsTitle');
   if(photoEl) photoEl.textContent=wallDataUrl?'Photo loaded':'No photo loaded';
   if(holdEl) holdEl.textContent=holds.length>0?holds.length+' holds mapped':'No holds mapped yet';
   if(resetRow) resetRow.style.display=holds.length>0?'':'none';
+  if(titleEl) titleEl.textContent=holds.length>0?'Add more holds':'Map holds';
 }
 
 // ─── Phase management ─────────────────────────────────────────────────────────
@@ -1564,7 +1583,7 @@ function setPhase(p){
   var fab=document.getElementById('fab'); if(fab) fab.classList.toggle('visible', c&&currentTab==='climbs');
   // Desktop toolbar buttons
   ['d-btnUndo','d-btnClear','d-btnPolyClose','d-sepDone','d-btnDoneSetup','d-btnResetSetup','d-btnZoomOut','d-zoomLabel','d-btnZoomIn','d-btnZoomReset'].forEach(function(id){ var el=document.getElementById(id); if(el) el.style.display=s?'':'none'; });
-  ['d-pillClimb','d-btnPlace','d-btnView','d-lblHoldType','d-btnTypeHand','d-btnTypeFoot','d-btnTypeStart','d-btnTypeFinish','d-btnDoneSelecting','d-sepNew','d-btnNew'].forEach(function(id){ var el=document.getElementById(id); if(el) el.style.display=c?'':'none'; });
+  ['d-pillClimb','d-btnPlace','d-btnView','d-lblHoldType','d-btnTypeHand','d-btnTypeFoot','d-btnTypeStart','d-btnTypeFinish','d-btnDoneSelecting','d-btnAddHolds','d-sepNew','d-btnNew'].forEach(function(id){ var el=document.getElementById(id); if(el) el.style.display=c?'':'none'; });
   // Sidebar label
   var st=document.getElementById('d-sideTitle'); if(st) st.textContent=s?'Holds':'Climbs';
   if(s){
@@ -1686,7 +1705,7 @@ function selClimb(id){
   renderList(); updateDetail();
   if(IS_MOBILE){
     // Mobile: auto-switch to wall tab
-    var alreadyOnWall=(currentTab='wall');
+    var alreadyOnWall=(currentTab==='wall');
     if(!alreadyOnWall){
       currentTab='wall';
       ['wall','climbs','setup','stats'].forEach(function(t){
@@ -1828,9 +1847,14 @@ function saveClimb(){
   climbs.push({id:id,name:name,grade:grade,fa:fa,holds:[],attempts:0,sends:0,created:new Date().toISOString()});
   closeModal(); active=id;
   renderList(); updateDetail(); save(); startGlow();
-  // Switch to wall tab in place mode so user can immediately assign holds
   setMode('place');
-  switchTab('wall');
+  if(IS_MOBILE){
+    // Mobile: switch to the Wall tab so holds can be tapped immediately
+    switchTab('wall');
+  } else {
+    // Desktop: canvas is already visible, just redraw with the new active climb
+    drawWall(); drawOverlay();
+  }
 }
 
 function updateClimb(){
