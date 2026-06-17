@@ -12,6 +12,14 @@
 <link rel="apple-touch-icon" sizes="152x152" href="icon-152.png">
 <link rel="apple-touch-icon" sizes="120x120" href="icon-120.png">
 <title>Spray Wall</title>
+<script>
+// Run immediately in <head>, before CSS/HTML paint, to avoid layout flash
+(function(){
+  var isMobile = (window.innerWidth <= 768) || ('ontouchstart' in window && window.innerWidth <= 1024);
+  document.documentElement.classList.add(isMobile ? 'mobile' : 'desktop');
+  window.IS_MOBILE = isMobile;
+})();
+</script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;overflow:hidden}
@@ -587,6 +595,9 @@ html.mobile .fab:active{transform:scale(0.93)}
 
 
 <script>
+// IS_MOBILE already set in <head> — assign local var for convenience in this scope
+var IS_MOBILE = window.IS_MOBILE;
+
 // ─── Supabase config ──────────────────────────────────────────────────────────
 var SB_URL='https://sirsmeautvjhrrohtrhi.supabase.co';
 var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpcnNtZWF1dHZqaHJyb2h0cmhpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1MDY1NTksImV4cCI6MjA5NzA4MjU1OX0.0gXpUfPBOGE1uTNfJEJ4GHfu4UgHzaQKdMoRAELfPfo';
