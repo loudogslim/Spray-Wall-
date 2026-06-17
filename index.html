@@ -903,14 +903,22 @@ function flash(id){ setSyncStatus('synced'); } // legacy alias
 
 // ─── Photo ────────────────────────────────────────────────────────────────────
 function showCanvases(){
-  // Desktop
-  var np=document.getElementById('np'), cw=document.getElementById('cw');
-  if(np) np.style.display='none';
-  if(cw) cw.style.display='inline-block';
-  // Mobile — move canvas-wrap into the mobile canvas area
-  var npM=document.getElementById('np-mobile'), caM=document.getElementById('ca-mobile');
-  if(npM) npM.style.display='none';
-  if(caM && cw && !caM.contains(cw)){ caM.appendChild(cw); }
+  if(IS_MOBILE){
+    // Mobile — move canvas-wrap into the mobile canvas area
+    var npM=document.getElementById('np-mobile'), caM=document.getElementById('ca-mobile');
+    if(npM) npM.style.display='none';
+    if(caM && document.getElementById('cw') && !caM.contains(document.getElementById('cw'))){
+      caM.appendChild(document.getElementById('cw'));
+    }
+  } else {
+    // Desktop — make sure canvas-wrap lives in the desktop canvas area
+    var np=document.getElementById('np'), ca=document.getElementById('ca'), cw=document.getElementById('cw');
+    if(np) np.style.display='none';
+    if(cw){
+      cw.style.display='inline-block';
+      if(ca && !ca.contains(cw)){ ca.appendChild(cw); }
+    }
+  }
 }
 function loadPhoto(e){
   var f=e.target.files[0]; if(!f) return;
