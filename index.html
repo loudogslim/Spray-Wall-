@@ -172,8 +172,8 @@ html.desktop .m-only{display:none!important}
 /* ══════════════════════════════════════════════════════════
    MOBILE LAYOUT  (.mobile class on <html>)
 ══════════════════════════════════════════════════════════ */
-html.mobile .d-toolbar,.html.mobile .d-main,.html.mobile .d-sidebar,
-html.mobile .d-canvas-area,.html.mobile .d-hint{display:none!important}
+html.mobile .d-toolbar,html.mobile .d-main,html.mobile .d-sidebar,
+html.mobile .d-canvas-area,html.mobile .d-hint{display:none!important}
 html.mobile .d-only{display:none!important}
 
 /* mobile top bar */
@@ -904,16 +904,18 @@ function flash(id){ setSyncStatus('synced'); } // legacy alias
 
 // ─── Photo ────────────────────────────────────────────────────────────────────
 function showCanvases(){
+  var cw=document.getElementById('cw');
   if(IS_MOBILE){
-    // Mobile — move canvas-wrap into the mobile canvas area
+    // Mobile — move canvas-wrap into the mobile canvas area and make it visible
     var npM=document.getElementById('np-mobile'), caM=document.getElementById('ca-mobile');
     if(npM) npM.style.display='none';
-    if(caM && document.getElementById('cw') && !caM.contains(document.getElementById('cw'))){
-      caM.appendChild(document.getElementById('cw'));
+    if(cw){
+      cw.style.display='inline-block';
+      if(caM && !caM.contains(cw)){ caM.appendChild(cw); }
     }
   } else {
     // Desktop — make sure canvas-wrap lives in the desktop canvas area
-    var np=document.getElementById('np'), ca=document.getElementById('ca'), cw=document.getElementById('cw');
+    var np=document.getElementById('np'), ca=document.getElementById('ca');
     if(np) np.style.display='none';
     if(cw){
       cw.style.display='inline-block';
