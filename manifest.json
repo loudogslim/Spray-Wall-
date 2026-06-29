@@ -2,7 +2,7 @@
   "name": "Spray Wall",
   "short_name": "Spray Wall",
   "description": "Log and track boulder problems on your home spray wall",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#0d0d0d",
   "theme_color": "#1a1a1a",

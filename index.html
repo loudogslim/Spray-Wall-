@@ -1931,15 +1931,25 @@ function saveClimb(){
   var fa=document.getElementById('iFA').value.trim();
   var id=Date.now().toString();
   climbs.push({id:id,name:name,grade:grade,fa:fa,holds:[],attempts:0,sends:0,created:new Date().toISOString()});
-  closeModal(); active=id;
-  renderList(); updateDetail(); save(); startGlow();
+  closeModal();
+  stopGlow();          // stop any previous climb's glow loop first
+  active=id;
+  dimmedWallCache=null; // force a fresh dim layer for the new (empty) climb
+  renderList(); updateDetail(); save();
   setMode('place');
   if(IS_MOBILE){
     // Mobile: switch to the Wall tab so holds can be tapped immediately
     switchTab('wall');
+    requestAnimationFrame(function(){
+      sizeCanvases();
+      drawWall();
+      drawOverlay();
+      startGlow();
+    });
   } else {
     // Desktop: canvas is already visible, just redraw with the new active climb
     drawWall(); drawOverlay();
+    startGlow();
   }
 }
 
@@ -2004,7 +2014,7 @@ window.addEventListener('resize',function(){ if(wallImg){ sizeCanvases(); drawOv
 <script>
 if("serviceWorker" in navigator){
   window.addEventListener("load", function(){
-    navigator.serviceWorker.register("/sw.js").then(function(r){
+    navigator.serviceWorker.register("./sw.js").then(function(r){
       console.log("SW registered", r.scope);
     }).catch(function(e){ console.log("SW failed", e); });
   });
